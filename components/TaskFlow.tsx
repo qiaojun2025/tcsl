@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { TaskType, Difficulty } from '../types';
-import { detectImage, getPlaceholderImage, getRandomCategory, CATEGORIES } from '../services/imageRecognition';
+import { TaskType, Difficulty } from '../types.ts';
+import { detectImage, getPlaceholderImage, getRandomCategory, CATEGORIES } from '../services/imageRecognition.ts';
 
 interface TaskFlowProps {
   type: TaskType;

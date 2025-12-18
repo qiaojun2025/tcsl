@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import AgentList from './components/AgentList';
-import ChatInterface from './components/ChatInterface';
-import { UserStats } from './types';
+import AgentList from './components/AgentList.tsx';
+import ChatInterface from './components/ChatInterface.tsx';
+import { UserStats } from './types.ts';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
@@ -63,7 +63,7 @@ const HomeIcon = () => (
 
 const TaskIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
   </svg>
 );
 

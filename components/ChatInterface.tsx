@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Difficulty, TaskType, UserStats } from '../types';
-import TaskFlow from './TaskFlow';
+import { Difficulty, TaskType, UserStats } from '../types.ts';
+import TaskFlow from './TaskFlow.tsx';
 
 interface Message {
   id: string;
