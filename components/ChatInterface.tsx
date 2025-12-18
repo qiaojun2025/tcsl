@@ -14,13 +14,29 @@ interface Message {
 interface ChatInterfaceProps {
   stats: UserStats;
   onBack: () => void;
-  onUpdateStats: (score: number, type: string) => void;
+  onUpdateStats: (score: number, type: TaskType, difficulty: Difficulty) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateStats }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeTask, setActiveTask] = useState<{type: TaskType, difficulty: Difficulty} | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const isCompletedToday = (type: TaskType, difficulty: Difficulty) => {
+    const key = `${type}_${difficulty}`;
+    const timestamp = stats.completions[key];
+    if (!timestamp) return false;
+    
+    const date = new Date(timestamp);
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear();
+  };
+
+  const isAllDifficultyDone = (type: TaskType) => {
+    return [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD].every(d => isCompletedToday(type, d));
+  };
 
   // Initial sequence
   useEffect(() => {
@@ -29,7 +45,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
       id: welcomeId,
       sender: 'agent',
       type: 'text',
-      payload: "嘿！我是你的任务中心 Agent。我负责协调 Web3 社区的任务分发与数据校验。通过完成任务，你可以为网络贡献价值并提升你的贡献度得分。",
+      payload: "嘿！我是你的任务中心 Agent。我负责协调 Web3 社区的任务分发与数据校验。请注意，为了保证数据多样性，每种任务的每个难度级别每日仅限完成一次。",
       timestamp: Date.now(),
     };
     
@@ -58,6 +74,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
   };
 
   const handleSelectTaskType = (type: TaskType) => {
+    if (isAllDifficultyDone(type)) {
+      addMessage(`我想执行【${type}】`, 'user');
+      setTimeout(() => {
+        addMessage(`抱歉，你今天已经完成了【${type}】的所有难度级别。请明天再来尝试，或者去看看其他任务吧！`, 'agent', 'text');
+        setTimeout(() => addMessage("", 'agent', 'task-type-select'), 600);
+      }, 400);
+      return;
+    }
+
     addMessage(`我想执行【${type}】`, 'user');
     setTimeout(() => {
       addMessage({ taskType: type }, 'agent', 'difficulty-select');
@@ -65,6 +90,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
   };
 
   const handleSelectDifficulty = (type: TaskType, difficulty: Difficulty) => {
+    if (isCompletedToday(type, difficulty)) {
+      addMessage(`选择难度：${difficulty}`, 'user');
+      setTimeout(() => {
+        addMessage(`该任务的【${difficulty}】级别今日已完成，请选择其他难度。`, 'agent', 'text');
+        setTimeout(() => addMessage({ taskType: type }, 'agent', 'difficulty-select'), 600);
+      }, 400);
+      return;
+    }
+
     addMessage(`选择难度：${difficulty}`, 'user');
     setTimeout(() => {
       addMessage("好的，任务即刻开始，请根据下方指令操作：", 'agent', 'text');
@@ -86,7 +120,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
   };
 
   const handleTaskComplete = (score: number, type: TaskType, details: string) => {
-    onUpdateStats(score, type);
+    if (activeTask) {
+      onUpdateStats(score, type, activeTask.difficulty);
+    }
     setActiveTask(null);
 
     const reportData = {
@@ -100,7 +136,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
     addMessage(reportData, 'agent', 'task-report');
     
     setTimeout(() => {
-      addMessage("任务已圆满结束。接下来想尝试什么？", 'agent', 'text');
+      addMessage("任务已圆满结束。该难度的任务今日已关闭，明天见！", 'agent', 'text');
       addMessage("", 'agent', 'task-type-select');
     }, 600);
   };
@@ -114,7 +150,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
   const showStats = () => {
     addMessage("查看我的统计", 'user', 'text');
     setTimeout(() => {
-      // Capture a snapshot of current stats for the report
       addMessage({ ...stats, reportTimestamp: Date.now() }, 'agent', 'stats-report');
       setTimeout(() => addMessage("", 'agent', 'task-type-select'), 600);
     }, 400);
@@ -127,22 +162,34 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
         return <p className="leading-relaxed">{msg.payload}</p>;
       
       case 'task-type-select':
+        const quickAllDone = isAllDifficultyDone(TaskType.QUICK_JUDGMENT);
+        const collAllDone = isAllDifficultyDone(TaskType.COLLECTION);
         return (
           <div className="space-y-3 mt-1">
             <p className="text-gray-600 mb-2">请选择你想要执行的任务类型：</p>
             <div className="grid grid-cols-1 gap-2">
               <button 
                 onClick={() => handleSelectTaskType(TaskType.QUICK_JUDGMENT)}
-                className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-sm active:bg-blue-700 text-left px-4 flex justify-between items-center"
+                className={`w-full py-3 rounded-xl font-bold shadow-sm text-left px-4 flex justify-between items-center transition-all ${
+                  quickAllDone ? 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-70' : 'bg-blue-600 text-white active:bg-blue-700'
+                }`}
               >
-                <span>🎯 快判任务</span>
+                <span className="flex items-center">
+                  <span>🎯 快判任务</span>
+                  {quickAllDone && <span className="ml-2 text-[10px] bg-gray-400 text-white px-1.5 py-0.5 rounded">今日额度已满</span>}
+                </span>
                 <span className="text-[10px] font-normal opacity-80">图片识别</span>
               </button>
               <button 
                 onClick={() => handleSelectTaskType(TaskType.COLLECTION)}
-                className="w-full bg-green-600 text-white py-3 rounded-xl font-bold shadow-sm active:bg-green-700 text-left px-4 flex justify-between items-center"
+                className={`w-full py-3 rounded-xl font-bold shadow-sm text-left px-4 flex justify-between items-center transition-all ${
+                  collAllDone ? 'bg-gray-200 text-gray-500 cursor-not-allowed opacity-70' : 'bg-green-600 text-white active:bg-green-700'
+                }`}
               >
-                <span>📸 采集任务</span>
+                <span className="flex items-center">
+                  <span>📸 采集任务</span>
+                  {collAllDone && <span className="ml-2 text-[10px] bg-gray-400 text-white px-1.5 py-0.5 rounded">今日额度已满</span>}
+                </span>
                 <span className="text-[10px] font-normal opacity-80">实地拍摄</span>
               </button>
               <button 
@@ -157,19 +204,33 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
         );
 
       case 'difficulty-select':
+        const t = msg.payload.taskType as TaskType;
         return (
           <div className="space-y-3 mt-1">
             <p className="text-gray-600 mb-2">请选择任务难度级别：</p>
-            <div className="grid grid-cols-3 gap-2">
-              {[Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD].map(d => (
-                <button 
-                  key={d}
-                  onClick={() => handleSelectDifficulty(msg.payload.taskType, d)}
-                  className="bg-gray-100 hover:bg-blue-50 text-blue-600 py-3 rounded-xl font-bold text-xs transition-colors border border-gray-200"
-                >
-                  {d}
-                </button>
-              ))}
+            <div className="grid grid-cols-1 gap-2">
+              {[Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD].map(d => {
+                const done = isCompletedToday(t, d);
+                return (
+                  <button 
+                    key={d}
+                    disabled={done}
+                    onClick={() => handleSelectDifficulty(t, d)}
+                    className={`w-full py-3 rounded-xl font-bold text-sm transition-all border flex justify-between items-center px-4 ${
+                      done 
+                        ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed opacity-60' 
+                        : 'bg-white text-blue-600 border-blue-100 hover:bg-blue-50 active:bg-blue-100'
+                    }`}
+                  >
+                    <span>{d}</span>
+                    {done ? (
+                      <span className="text-[9px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded">今日已完成</span>
+                    ) : (
+                      <span className="text-[9px] text-gray-400">贡献度加成</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
         );

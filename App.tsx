@@ -2,30 +2,47 @@
 import React, { useState, useEffect } from 'react';
 import AgentList from './components/AgentList.tsx';
 import ChatInterface from './components/ChatInterface.tsx';
-import { UserStats } from './types.ts';
+import { UserStats, TaskType, Difficulty } from './types.ts';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
-  const [stats, setStats] = useState<UserStats>({
-    userId: 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
-    username: '探路者',
-    quickCount: 0,
-    collectionCount: 0,
-    quickScore: 0,
-    collectionScore: 0,
-    totalScore: 0
+  const [stats, setStats] = useState<UserStats>(() => {
+    const saved = localStorage.getItem('web3_task_stats');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return {
+      userId: 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
+      username: '探路者',
+      quickCount: 0,
+      collectionCount: 0,
+      quickScore: 0,
+      collectionScore: 0,
+      totalScore: 0,
+      completions: {}
+    };
   });
 
-  const updateStats = (score: number, type: string) => {
+  useEffect(() => {
+    localStorage.setItem('web3_task_stats', JSON.stringify(stats));
+  }, [stats]);
+
+  const updateStats = (score: number, type: TaskType, difficulty: Difficulty) => {
     setStats(prev => {
-      const isQuick = type === '快判任务';
+      const isQuick = type === TaskType.QUICK_JUDGMENT;
+      const completionKey = `${type}_${difficulty}`;
+      
       return {
         ...prev,
         quickCount: isQuick ? prev.quickCount + 1 : prev.quickCount,
         collectionCount: !isQuick ? prev.collectionCount + 1 : prev.collectionCount,
         quickScore: isQuick ? prev.quickScore + score : prev.quickScore,
         collectionScore: !isQuick ? prev.collectionScore + score : prev.collectionScore,
-        totalScore: prev.totalScore + score
+        totalScore: prev.totalScore + score,
+        completions: {
+          ...prev.completions,
+          [completionKey]: Date.now()
+        }
       };
     });
   };

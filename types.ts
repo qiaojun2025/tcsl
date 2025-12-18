@@ -27,6 +27,8 @@ export interface UserStats {
   quickScore: number;
   collectionScore: number;
   totalScore: number;
+  // Key format: "TaskType_Difficulty" e.g. "快判任务_初级"
+  completions: Record<string, number>;
 }
 
 export interface Agent {
