@@ -62,20 +62,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
     if (type === TaskType.QUICK_JUDGMENT) {
       setTimeout(() => addMessage({ taskType: type }, 'agent', 'difficulty-select'), 400);
     } else {
-      setTimeout(() => addMessage("", 'agent', 'category-select'), 400);
+      // Skip category select and go directly to difficulty for collection tasks
+      setTimeout(() => addMessage({ taskType: type, category: CollectionCategory.IMAGE }, 'agent', 'difficulty-select'), 400);
     }
-  };
-
-  const handleSelectCategory = (category: CollectionCategory) => {
-    addMessage(`选择分类：${category}`, 'user');
-    setTimeout(() => addMessage({ taskType: TaskType.COLLECTION, category }, 'agent', 'difficulty-select'), 400);
   };
 
   const handleSelectDifficulty = (type: TaskType, difficulty: Difficulty, category?: CollectionCategory) => {
     addMessage(`选择难度：${difficulty}`, 'user');
     setTimeout(() => {
       addMessage("好的，正在为您匹配校验节点。任务即将开始：", 'agent', 'text');
-      setActiveTask({ type, difficulty, category });
+      setActiveTask({ type, difficulty, category: category || CollectionCategory.IMAGE });
     }, 400);
   };
 
@@ -87,7 +83,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
       if (isCorrect) {
         addMessage(`✅ 校验通过！贡献度 +${points}`, 'agent', 'text');
       } else {
-        addMessage("❌ 校验不匹配，此题无贡献度。继续下一项。", 'agent', 'text');
+        addMessage("❌ 校验不匹配，此题无贡献度. 继续下一项。", 'agent', 'text');
       }
     }, 100);
   };
@@ -144,33 +140,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
               </button>
               <button onClick={() => handleSelectTaskType(TaskType.COLLECTION)} className="w-full py-3 rounded-xl font-bold shadow-sm text-left px-4 flex justify-between items-center transition-all bg-green-600 text-white active:bg-green-700">
                 <span>📸 采集任务</span>
-                <span className="text-[10px] font-normal opacity-80 text-white">实地采集</span>
+                <span className="text-[10px] font-normal opacity-80 text-white">图片采集</span>
               </button>
               <button onClick={showStats} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-sm active:bg-indigo-700 text-left px-4 flex justify-between items-center">
                 <span>📈 我的统计</span>
                 <span className="text-[10px] font-normal opacity-80">贡献概览</span>
               </button>
-            </div>
-          </div>
-        );
-
-      case 'category-select':
-        const cats = [
-          { id: CollectionCategory.IMAGE, icon: '🖼️', sub: '图片采集' },
-          { id: CollectionCategory.VIDEO, icon: '🎥', sub: '视频采集' },
-          { id: CollectionCategory.AUDIO, icon: '🎤', sub: '音频采集' },
-          { id: CollectionCategory.TEXT, icon: '✍️', sub: '文本采集' }
-        ];
-        return (
-          <div className="space-y-3 mt-1">
-            <p className="text-gray-600 mb-2">请选择采集分类：</p>
-            <div className="grid grid-cols-2 gap-2">
-              {cats.map(cat => (
-                <button key={cat.id} onClick={() => handleSelectCategory(cat.id)} className="py-4 rounded-xl border flex flex-col items-center justify-center transition-all bg-white text-gray-800 border-gray-200 active:bg-gray-50">
-                  <span className="text-2xl mb-1">{cat.icon}</span>
-                  <span className="text-[10px] font-bold">{cat.sub}</span>
-                </button>
-              ))}
             </div>
           </div>
         );

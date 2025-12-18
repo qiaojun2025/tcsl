@@ -17,16 +17,43 @@ const CATEGORY_MAP: Record<string, string> = {
   'motorcycle': '摩托车', 'bird': '鸟', 'bottle': '瓶子', 'chair': '椅子', 'laptop': '笔记本电脑'
 };
 
-const SUB_CATEGORIES: Record<string, string[]> = {
-  [CollectionCategory.IMAGE]: [
-    '动物（如：狗、猫、鹦鹉等）', 
-    '街景（如：纽约、巴黎、东京等）', 
-    '商品（如：电话、平板、苹果、香蕉等）', 
-    '证件（如：身份证、通行证、银行卡等）'
+const COLLECTION_PROMPTS = {
+  [Difficulty.EASY]: [
+    '请采集一张白色的狗的照片',
+    '请采集家庭作业的照片',
+    '请采集一张绿色植物的照片',
+    '请采集一个饮用水瓶的照片',
+    '请采集一张桌子的照片',
+    '请采集一张笔记本电脑的照片',
+    '请采集一个水果的照片（苹果/香蕉等）',
+    '请采集一张椅子的照片',
+    '请采集一个手提包的照片',
+    '请采集一张书本的照片'
   ],
-  [CollectionCategory.VIDEO]: ['动作', '行为', '场景'],
-  [CollectionCategory.AUDIO]: ['语音朗读', '环境音'],
-  [CollectionCategory.TEXT]: ['手写内容', '场景描述', '问答采集']
+  [Difficulty.MEDIUM]: [
+    '请采集街景的照片 (需包含地理位置信息)',
+    '请采集繁华商业区建筑的照片 (需包含地理位置信息)',
+    '请采集当地公园景观的照片 (需验证实时性)',
+    '请采集公共交通站台的照片 (需验证位置与时间)',
+    '请采集当地地标性雕塑的照片 (需包含定位)',
+    '请采集附近超市入口的照片 (需包含定位)',
+    '请采集社区健身器材的照片 (需包含定位)',
+    '请采集附近十字路口红绿灯的照片 (需包含定位)',
+    '请采集当地图书馆外观的照片 (需包含定位)',
+    '请采集附近停车场标识的照片 (需包含定位)'
+  ],
+  [Difficulty.HARD]: [
+    '请在 30 分钟内拍摄你正在洗碗的照片 (仅限实时拍摄)',
+    '请在 30 分钟内你正在打扫房间的照片 (仅限实时拍摄)',
+    '请在 30 分钟内你正在整理书架的照片 (仅限实时拍摄)',
+    '请在 30 分钟内你正在进行体育锻炼的照片 (仅限实时拍摄)',
+    '请在 30 分钟内拍摄你正在做饭的照片 (仅限实时拍摄)',
+    '请在 30 分钟内拍摄你正在阅读的照片 (仅限实时拍摄)',
+    '请在 30 分钟内拍摄你正在给植物浇水的照片 (仅限实时拍摄)',
+    '请在 30 分钟内拍摄你正在办公/学习的照片 (仅限实时拍摄)',
+    '请在 30 分钟内拍摄你正在整理床铺的照片 (仅限实时拍摄)',
+    '请在 30 分钟内拍摄你正在整理衣柜的照片 (仅限实时拍摄)'
+  ]
 };
 
 const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onStepFeedback, onComplete, onCancel }) => {
@@ -39,13 +66,14 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onStepF
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'skipped' | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [textInput, setTextInput] = useState('');
+  
+  // Track used items to prevent duplicates within one session
+  const [usedIndices, setUsedIndices] = useState<Set<number | string>>(new Set());
 
   const getPointsPerTask = () => {
-    if (type === TaskType.QUICK_JUDGMENT) {
-      return difficulty === Difficulty.EASY ? 1 : difficulty === Difficulty.MEDIUM ? 3 : 6;
-    } else {
-      return difficulty === Difficulty.EASY ? 2 : difficulty === Difficulty.MEDIUM ? 4 : 8;
-    }
+    if (difficulty === Difficulty.EASY) return 1;
+    if (difficulty === Difficulty.MEDIUM) return 3;
+    return 6;
   };
 
   const generateNewTask = useCallback(() => {
@@ -55,8 +83,16 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onStepF
     setTextInput('');
     
     if (type === TaskType.QUICK_JUDGMENT) {
-      let target = getRandomCategory();
+      // Find a category that hasn't been used as target yet
+      const availableCategories = CATEGORIES.filter(c => !usedIndices.has(c));
+      
+      // If exhausted (unlikely given pool size), reset
+      const pool = availableCategories.length > 0 ? availableCategories : CATEGORIES;
+      const target = pool[Math.floor(Math.random() * pool.length)];
+      
+      setUsedIndices(prev => new Set(prev).add(target));
       const targetZh = CATEGORY_MAP[target] || target;
+
       if (difficulty === Difficulty.EASY) {
         const other = CATEGORIES.filter(c => c !== target)[Math.floor(Math.random() * (CATEGORIES.length - 1))];
         setCurrentTask({ 
@@ -83,37 +119,35 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onStepF
       }
     } else {
       // Collection Task
-      const modality = category || CollectionCategory.IMAGE;
-      const subs = SUB_CATEGORIES[modality];
-      const sub = subs[Math.floor(Math.random() * subs.length)];
+      const promptList = COLLECTION_PROMPTS[difficulty];
+      const availableIndices = promptList.map((_, i) => i).filter(i => !usedIndices.has(i));
       
-      let title = '';
-      const isImage = modality === CollectionCategory.IMAGE;
-      const suffix = isImage ? "的图片" : "";
-
-      if (difficulty === Difficulty.EASY) {
-        title = `[采集任务] 请上传一张“${sub}”${suffix}`;
-      } else if (difficulty === Difficulty.MEDIUM) {
-        title = `[中级任务] 请在附近拍摄并上传一张真实的“${sub}”${suffix}，我们将验证其时间与位置`;
-      } else {
-        title = `[高级挑战] 请在 30 分钟内实地拍摄一张“${sub}”正在进行特定行为${suffix}`;
+      // If pool exhausted, reset indices for this category
+      const poolIndices = availableIndices.length > 0 ? availableIndices : promptList.map((_, i) => i);
+      const randomIndex = poolIndices[Math.floor(Math.random() * poolIndices.length)];
+      
+      setUsedIndices(prev => new Set(prev).add(randomIndex));
+      const randomPrompt = promptList[randomIndex];
+      
+      if (difficulty === Difficulty.HARD) {
+        setTimeLeft(1800); 
       }
 
-      setCurrentTask({ title, modality, sub });
+      setCurrentTask({ title: randomPrompt, sub: randomPrompt });
     }
     setTimeout(() => setIsLoading(false), 400);
-  }, [type, difficulty, category]);
+  }, [type, difficulty, usedIndices]);
 
-  useEffect(() => { generateNewTask(); }, [generateNewTask]);
+  useEffect(() => { generateNewTask(); }, []); // Run once on mount
 
   useEffect(() => {
-    if (timeLeft > 0 && !feedback && difficulty === Difficulty.HARD && type === TaskType.QUICK_JUDGMENT) {
+    if (timeLeft > 0 && !feedback && difficulty === Difficulty.HARD) {
       const timer = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
       return () => clearTimeout(timer);
     } else if (timeLeft === 0 && difficulty === Difficulty.HARD && type === TaskType.QUICK_JUDGMENT && !feedback && currentTask) {
       handleHardSubmit();
     }
-  }, [timeLeft, feedback, currentTask]);
+  }, [timeLeft, feedback, currentTask, type, difficulty]);
 
   const processChoice = (isCorrect: boolean | 'skipped', choiceLabel?: string) => {
     if (feedback) return;
@@ -131,7 +165,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onStepF
         generateNewTask(); 
       } 
       else { 
-        onComplete(score + pts, type, `完成 [${difficulty}] 任务, 分类: ${category || '图片采集'}`); 
+        onComplete(score + pts, type, `完成 [${difficulty}] 任务`); 
       }
     }, 1000);
   };
@@ -146,18 +180,31 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onStepF
       setIsLoading(true);
       setTimeout(() => {
         setIsLoading(false);
-        processChoice(true, `成功采集文件: ${e.target.files![0].name}`);
-      }, 800);
+        processChoice(true, `已上传采集图片并完成 AI 校验`);
+      }, 1200);
     }
   };
 
-  if (isLoading) return <div className="p-10 text-center text-gray-400 font-bold animate-pulse">AI 任务加载中...</div>;
+  if (isLoading) return <div className="p-10 text-center text-gray-400 font-bold animate-pulse">AI 正在处理数据...</div>;
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-lg w-full relative overflow-hidden">
       <div className="flex justify-between items-center mb-6">
         <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 uppercase tracking-widest">任务进度 {step}/{totalSteps}</span>
-        <button onClick={onCancel} className="text-gray-300 hover:text-red-400 transition-colors"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg></button>
+        {difficulty === Difficulty.HARD && timeLeft > 0 && (
+          <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100 animate-pulse">
+            剩余时间: {formatTime(timeLeft)}
+          </span>
+        )}
+        <button onClick={onCancel} className="text-gray-300 hover:text-red-400 transition-colors">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
       </div>
 
       {currentTask && (
@@ -203,21 +250,27 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onStepF
             </div>
           ) : (
             <div className="space-y-4">
-              {category === CollectionCategory.TEXT ? (
-                <div className="space-y-3">
-                  <textarea value={textInput} onChange={(e) => setTextInput(e.target.value)} className="w-full h-32 border-2 border-gray-100 rounded-2xl p-4 text-sm focus:border-blue-500 outline-none transition-colors" placeholder="在此输入采集的信息内容..." />
-                  <button onClick={() => processChoice(true, "已提交文本内容")} disabled={textInput.trim().length < 5} className="w-full bg-blue-600 text-white py-4 rounded-xl font-black shadow-lg shadow-blue-100 disabled:bg-gray-200">提交数据</button>
+              <div className="space-y-4">
+                <div className="border-2 border-dashed border-gray-200 rounded-3xl p-12 flex flex-col items-center justify-center bg-gray-50 transition-colors hover:border-blue-300">
+                  <span className="text-4xl mb-3">
+                    {difficulty === Difficulty.HARD ? '📸' : '🖼️'}
+                  </span>
+                  <p className="text-[10px] font-black text-gray-400 tracking-widest uppercase text-center">
+                    {difficulty === Difficulty.HARD ? '仅支持摄像头实时拍摄' : '支持相册上传或现场拍摄'}
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-200 rounded-3xl p-12 flex flex-col items-center justify-center bg-gray-50 transition-colors hover:border-blue-300">
-                    <span className="text-4xl mb-3">{category === CollectionCategory.VIDEO ? '🎥' : category === CollectionCategory.AUDIO ? '🎤' : '🖼️'}</span>
-                    <p className="text-[10px] font-black text-gray-400 tracking-widest uppercase">等待文件上传</p>
-                  </div>
-                  <input type="file" className="hidden" id="task-upload" onChange={handleFileUpload} accept={category === CollectionCategory.IMAGE ? "image/*" : category === CollectionCategory.VIDEO ? "video/*" : category === CollectionCategory.AUDIO ? "audio/*" : "*"} />
-                  <label htmlFor="task-upload" className="block w-full bg-blue-600 text-white py-4 rounded-xl font-black text-center cursor-pointer shadow-lg shadow-blue-100 active:bg-blue-700 transition-all">{difficulty === Difficulty.HARD ? '立即拍摄采集' : '从相册/文件上传'}</label>
-                </div>
-              )}
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  id="task-upload" 
+                  onChange={handleFileUpload} 
+                  accept="image/*"
+                  capture={difficulty === Difficulty.HARD ? "environment" : undefined}
+                />
+                <label htmlFor="task-upload" className="block w-full bg-blue-600 text-white py-4 rounded-xl font-black text-center cursor-pointer shadow-lg shadow-blue-100 active:bg-blue-700 transition-all">
+                  {difficulty === Difficulty.HARD ? '立即开启摄像头拍摄' : '上传图片采集内容'}
+                </label>
+              </div>
               <button onClick={() => processChoice('skipped', '跳过了此项')} className="w-full text-gray-400 text-[10px] font-bold tracking-widest uppercase py-2">暂时跳过此项</button>
             </div>
           )}
@@ -230,6 +283,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onStepF
             {feedback === 'correct' ? <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" /></svg> : feedback === 'wrong' ? <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M6 18L18 6M6 6l12 12" /></svg> : <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>}
           </div>
           <p className="text-white font-black text-xl tracking-widest uppercase">{feedback === 'correct' ? '校验通过' : feedback === 'wrong' ? '校验失败' : '已跳过'}</p>
+          {feedback === 'correct' && <p className="text-white text-xs mt-2 font-bold">贡献度 +{getPointsPerTask()}</p>}
         </div>
       )}
     </div>
