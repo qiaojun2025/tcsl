@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import AgentList from './components/AgentList.tsx';
 import ChatInterface from './components/ChatInterface.tsx';
-import { UserStats, TaskType, Difficulty } from './types.ts';
+import { UserStats, TaskType, Difficulty, CollectionCategory } from './types.ts';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
@@ -27,10 +27,10 @@ const App: React.FC = () => {
     localStorage.setItem('web3_task_stats', JSON.stringify(stats));
   }, [stats]);
 
-  const updateStats = (score: number, type: TaskType, difficulty: Difficulty) => {
+  const updateStats = (score: number, type: TaskType, difficulty: Difficulty, category?: CollectionCategory) => {
     setStats(prev => {
       const isQuick = type === TaskType.QUICK_JUDGMENT;
-      const completionKey = `${type}_${difficulty}`;
+      const completionKey = category ? `${type}_${category}_${difficulty}_${Date.now()}` : `${type}_${difficulty}_${Date.now()}`;
       
       return {
         ...prev,
