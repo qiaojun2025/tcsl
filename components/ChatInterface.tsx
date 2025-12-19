@@ -177,7 +177,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
               </div>
               {r.type === TaskType.COLLECTION && r.category && (
                 <div className="flex justify-between items-center border-b border-gray-50 pb-1.5 bg-green-50/20 px-1 rounded">
-                  <span className="text-gray-500 font-medium">采集任务分类</span>
+                  <span className="text-gray-400">采集任务分类</span>
                   <span className="font-black text-green-600">{r.category}</span>
                 </div>
               )}
@@ -217,7 +217,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
         return (
           <div className="bg-white p-5 rounded-2xl border-2 border-indigo-100 shadow-xl w-full">
             <h4 className="font-black text-indigo-900 mb-4 flex items-center justify-between border-b border-indigo-50 pb-3">
-               <span className="flex items-center text-lg"><span className="mr-2">📈</span> 任务累计日报</span>
+               <span className="flex items-center text-lg"><span className="mr-2">📈</span> 累计统计日报</span>
                <span className="text-[9px] bg-indigo-50 text-indigo-500 px-2 py-1 rounded-full border border-indigo-100 font-black uppercase tracking-tighter">Chain Stats</span>
             </h4>
             

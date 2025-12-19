@@ -9,33 +9,55 @@ const App: React.FC = () => {
   const [stats, setStats] = useState<UserStats>(() => {
     const saved = localStorage.getItem('web3_task_stats');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        userId: parsed.userId || 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
-        username: parsed.username || '探路者',
-        totalDuration: parsed.totalDuration || 0,
-        totalCorrect: parsed.totalCorrect || 0,
-        totalAttempted: parsed.totalAttempted || 0,
-        quickEasyCount: parsed.quickEasyCount || 0,
-        quickEasyScore: parsed.quickEasyScore || 0,
-        quickMediumCount: parsed.quickMediumCount || 0,
-        quickMediumScore: parsed.quickMediumScore || 0,
-        quickHardCount: parsed.quickHardCount || 0,
-        quickHardScore: parsed.quickHardScore || 0,
-        collectionEasyCount: parsed.collectionEasyCount || 0,
-        collectionEasyScore: parsed.collectionEasyScore || 0,
-        collectionMediumCount: parsed.collectionMediumCount || 0,
-        collectionMediumScore: parsed.collectionMediumScore || 0,
-        collectionHardCount: parsed.collectionHardCount || 0,
-        collectionHardScore: parsed.collectionHardScore || 0,
-        quickCount: parsed.quickCount || 0,
-        collectionCount: parsed.collectionCount || 0,
-        quickScore: parsed.quickScore || 0,
-        collectionScore: parsed.collectionScore || 0,
-        totalScore: parsed.totalScore || 0,
-        completions: parsed.completions || {}
-      };
+      try {
+        const p = JSON.parse(saved);
+        // Ensure all numeric fields exist
+        const s = {
+          userId: p.userId || 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
+          username: p.username || '探路者',
+          totalDuration: Number(p.totalDuration) || 0,
+          totalCorrect: Number(p.totalCorrect) || 0,
+          totalAttempted: Number(p.totalAttempted) || 0,
+          
+          quickEasyCount: Number(p.quickEasyCount) || 0,
+          quickEasyScore: Number(p.quickEasyScore) || 0,
+          quickMediumCount: Number(p.quickMediumCount) || 0,
+          quickMediumScore: Number(p.quickMediumScore) || 0,
+          quickHardCount: Number(p.quickHardCount) || 0,
+          quickHardScore: Number(p.quickHardScore) || 0,
+          
+          collectionEasyCount: Number(p.collectionEasyCount) || 0,
+          collectionEasyScore: Number(p.collectionEasyScore) || 0,
+          collectionMediumCount: Number(p.collectionMediumCount) || 0,
+          collectionMediumScore: Number(p.collectionMediumScore) || 0,
+          collectionHardCount: Number(p.collectionHardCount) || 0,
+          collectionHardScore: Number(p.collectionHardScore) || 0,
+          
+          completions: p.completions || {},
+          
+          // Derived totals (calculated below for safety)
+          quickCount: 0,
+          collectionCount: 0,
+          quickScore: 0,
+          collectionScore: 0,
+          totalScore: 0
+        };
+
+        // Recalculate aggregate totals for data integrity
+        s.quickCount = s.quickEasyCount + s.quickMediumCount + s.quickHardCount;
+        s.quickScore = s.quickEasyScore + s.quickMediumScore + s.quickHardScore;
+        
+        s.collectionCount = s.collectionEasyCount + s.collectionMediumCount + s.collectionHardCount;
+        s.collectionScore = s.collectionEasyScore + s.collectionMediumScore + s.collectionHardScore;
+        
+        s.totalScore = s.quickScore + s.collectionScore;
+
+        return s;
+      } catch (e) {
+        console.error("Failed to parse stats", e);
+      }
     }
+    
     return {
       userId: 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
       username: '探路者',
@@ -76,19 +98,19 @@ const App: React.FC = () => {
   ) => {
     setStats(prev => {
       const isQuick = type === TaskType.QUICK_JUDGMENT;
-      const completionKey = category ? `${type}_${category}_${difficulty}_${Date.now()}` : `${type}_${difficulty}_${Date.now()}`;
+      const timestamp = Date.now();
+      const completionKey = category ? `${type}_${category}_${difficulty}_${timestamp}` : `${type}_${difficulty}_${timestamp}`;
       
-      const newStats = { ...prev };
+      // Deep copy numeric stats but shallow copy object references we plan to spread
+      const newStats = { ...prev, completions: { ...prev.completions, [completionKey]: timestamp } };
       
+      // 1. Update Global Performance Metrics
       newStats.totalDuration += performance.duration;
       newStats.totalCorrect += performance.correctCount;
       newStats.totalAttempted += performance.totalCount;
-      newStats.totalScore += score;
-      newStats.completions[completionKey] = Date.now();
 
+      // 2. Update Specific Difficulty/Type Buckets
       if (isQuick) {
-        newStats.quickCount += 1;
-        newStats.quickScore += score;
         if (difficulty === Difficulty.EASY) {
           newStats.quickEasyCount += 1;
           newStats.quickEasyScore += score;
@@ -100,8 +122,6 @@ const App: React.FC = () => {
           newStats.quickHardScore += score;
         }
       } else {
-        newStats.collectionCount += 1;
-        newStats.collectionScore += score;
         if (difficulty === Difficulty.EASY) {
           newStats.collectionEasyCount += 1;
           newStats.collectionEasyScore += score;
@@ -113,6 +133,15 @@ const App: React.FC = () => {
           newStats.collectionHardScore += score;
         }
       }
+
+      // 3. Recalculate All Aggregate Totals to prevent any possibility of sync issues
+      newStats.quickCount = newStats.quickEasyCount + newStats.quickMediumCount + newStats.quickHardCount;
+      newStats.quickScore = newStats.quickEasyScore + newStats.quickMediumScore + newStats.quickHardScore;
+      
+      newStats.collectionCount = newStats.collectionEasyCount + newStats.collectionMediumCount + newStats.collectionHardCount;
+      newStats.collectionScore = newStats.collectionEasyScore + newStats.collectionMediumScore + newStats.collectionHardScore;
+      
+      newStats.totalScore = newStats.quickScore + newStats.collectionScore;
 
       return newStats;
     });
