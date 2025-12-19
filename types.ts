@@ -30,6 +30,26 @@ export interface TaskRecord {
 export interface UserStats {
   userId: string;
   username: string;
+  totalDuration: number; // 总耗时（秒）
+  totalCorrect: number;  // 总正确次数
+  totalAttempted: number; // 总尝试次数
+  
+  // 快判任务明细
+  quickEasyCount: number;
+  quickEasyScore: number;
+  quickMediumCount: number;
+  quickMediumScore: number;
+  quickHardCount: number;
+  quickHardScore: number;
+  
+  // 采集任务明细
+  collectionEasyCount: number;
+  collectionEasyScore: number;
+  collectionMediumCount: number;
+  collectionMediumScore: number;
+  collectionHardCount: number;
+  collectionHardScore: number;
+
   quickCount: number;
   collectionCount: number;
   quickScore: number;

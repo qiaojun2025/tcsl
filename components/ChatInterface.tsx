@@ -14,7 +14,7 @@ interface Message {
 interface ChatInterfaceProps {
   stats: UserStats;
   onBack: () => void;
-  onUpdateStats: (score: number, type: TaskType, difficulty: Difficulty, category?: CollectionCategory) => void;
+  onUpdateStats: (score: number, type: TaskType, difficulty: Difficulty, performance: { correctCount: number; totalCount: number; duration: number }, category?: CollectionCategory) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateStats }) => {
@@ -70,7 +70,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
   const handleSelectDifficulty = (type: TaskType, difficulty: Difficulty, category?: CollectionCategory) => {
     addMessage(`难度：${difficulty}`, 'user');
     setTimeout(() => {
-      addMessage("好的，正在为您匹配去中心化验证节点。任务即将开始：", 'agent', 'text');
+      addMessage("好的，正在为您匹配去中心化验证节点. 任务即将开始：", 'agent', 'text');
       setActiveTask({ type, difficulty, category });
     }, 400);
   };
@@ -79,15 +79,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
     const d = activeTask?.difficulty || Difficulty.EASY;
     const c = activeTask?.category;
     
-    onUpdateStats(score, type, d, c);
+    const duration = Math.floor((performance.endTime - performance.startTime) / 1000);
+    
+    onUpdateStats(score, type, d, {
+        correctCount: performance.correctCount,
+        totalCount: performance.totalCount,
+        duration: duration
+    }, c);
+    
     setActiveTask(null);
 
+    const taskNumber = `TASK-${Date.now()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
     const reportData = {
+      taskNumber: taskNumber,
       username: stats.username,
       userId: stats.userId,
       timestamp: performance.endTime,
       startTime: performance.startTime,
-      duration: Math.floor((performance.endTime - performance.startTime) / 1000),
+      duration: duration,
       type: type,
       difficulty: d,
       category: c,
@@ -143,14 +153,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
       case 'task-report':
         const r = msg.payload;
         return (
-          <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-lg w-full">
-            <h4 className="font-black text-blue-900 mb-4 flex items-center justify-between">
-               <span className="flex items-center"><span className="mr-2">📋</span> 任务日报</span>
-               <span className="text-[8px] bg-blue-50 text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-tighter">Verified</span>
+          <div className="bg-white p-5 rounded-2xl border-2 border-blue-100 shadow-xl w-full">
+            <h4 className="font-black text-blue-900 mb-4 flex items-center justify-between border-b border-blue-50 pb-2">
+               <span className="flex items-center text-lg"><span className="mr-2">📋</span> 任务报告</span>
+               <span className="text-[8px] bg-blue-50 text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-tighter font-black">Verified</span>
             </h4>
-            <div className="space-y-2 text-[11px] text-gray-600">
+            <div className="space-y-2.5 text-[11px] text-gray-600">
               <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
-                <span className="text-gray-400">贡献用户</span>
+                <span className="text-gray-400">任务编号</span>
+                <span className="font-mono text-[9px] text-blue-500 font-bold">{r.taskNumber}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">用户名</span>
                 <span className="font-bold text-gray-800">{r.username}</span>
               </div>
               <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
@@ -161,60 +175,118 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
                 <span className="text-gray-400">任务类型</span>
                 <span className="font-bold text-blue-600">{r.type}</span>
               </div>
+              {r.type === TaskType.COLLECTION && r.category && (
+                <div className="flex justify-between items-center border-b border-gray-50 pb-1.5 bg-green-50/20 px-1 rounded">
+                  <span className="text-gray-500 font-medium">采集任务分类</span>
+                  <span className="font-black text-green-600">{r.category}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
                 <span className="text-gray-400">任务级别</span>
-                <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px]">{r.difficulty}</span>
+                <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px] font-bold text-gray-700">{r.difficulty}</span>
               </div>
               <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
-                <span className="text-gray-400">开始时间</span>
-                <span className="text-gray-500">{new Date(r.startTime).toLocaleTimeString()}</span>
+                <span className="text-gray-400">任务开始时间</span>
+                <span className="text-gray-500 font-mono">{new Date(r.startTime).toLocaleString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
               </div>
               <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
                 <span className="text-gray-400">任务耗时</span>
-                <span className="font-bold">{r.duration} 秒</span>
+                <span className="font-black text-gray-800">{r.duration} 秒</span>
               </div>
               <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
                 <span className="text-gray-400">任务准确率</span>
-                <span className={`font-black ${r.accuracy.startsWith('10/10') ? 'text-green-600' : 'text-blue-600'}`}>{r.accuracy}</span>
+                <span className={`font-black ${r.accuracy.split('/')[0] === r.accuracy.split('/')[1] ? 'text-green-600' : 'text-blue-600'}`}>{r.accuracy}</span>
               </div>
               
               <div className="pt-4 flex justify-between items-center">
-                <span className="font-black text-gray-900 text-sm">获得贡献度</span>
+                <span className="font-black text-gray-900 text-sm italic">获得贡献度</span>
                 <div className="flex items-baseline">
                   <span className="text-2xl font-black text-green-600">+{r.score}</span>
-                  <span className="ml-1 text-[8px] text-green-400 font-bold uppercase">Points</span>
+                  <span className="ml-1 text-[8px] text-green-400 font-bold uppercase tracking-widest">Points</span>
                 </div>
               </div>
             </div>
           </div>
         );
       case 'stats-report':
-        const s = msg.payload;
+        const s = msg.payload as UserStats & { reportTimestamp: number };
+        const totalAccuracy = s.totalAttempted > 0 
+            ? ((s.totalCorrect / s.totalAttempted) * 100).toFixed(1) + '%' 
+            : '0%';
+        
         return (
-          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 shadow-sm w-full">
-            <h4 className="font-bold text-indigo-900 mb-3 flex items-center">
-               <span className="mr-2">📈</span> 累计统计报告
+          <div className="bg-white p-5 rounded-2xl border-2 border-indigo-100 shadow-xl w-full">
+            <h4 className="font-black text-indigo-900 mb-4 flex items-center justify-between border-b border-indigo-50 pb-3">
+               <span className="flex items-center text-lg"><span className="mr-2">📈</span> 任务累计日报</span>
+               <span className="text-[9px] bg-indigo-50 text-indigo-500 px-2 py-1 rounded-full border border-indigo-100 font-black uppercase tracking-tighter">Chain Stats</span>
             </h4>
-            <div className="space-y-1.5 text-xs text-indigo-800">
-              <div className="flex justify-between border-b border-indigo-100 pb-1"><span>用户名</span> <span className="font-bold">{s.username}</span></div>
-              <div className="flex justify-between border-b border-indigo-100 pb-1"><span>用户ID</span> <span className="font-mono text-[9px]">{s.userId}</span></div>
-              <div className="flex justify-between border-b border-indigo-100 pb-1"><span>时间戳</span> <span className="font-mono">{s.reportTimestamp}</span></div>
-              
-              <div className="grid grid-cols-2 gap-2 mt-4">
-                <div className="bg-white p-2.5 rounded-lg border border-indigo-100">
-                  <p className="text-[8px] text-gray-400 uppercase font-black">快判完成</p>
-                  <p className="text-sm font-bold mt-0.5">{s.quickCount} 次</p>
-                  <p className="text-[10px] text-green-600 font-bold mt-1">+{s.quickScore} 分</p>
-                </div>
-                <div className="bg-white p-2.5 rounded-lg border border-indigo-100">
-                  <p className="text-[8px] text-gray-400 uppercase font-black">采集完成</p>
-                  <p className="text-sm font-bold mt-0.5">{s.collectionCount} 次</p>
-                  <p className="text-[10px] text-green-600 font-bold mt-1">+{s.collectionScore} 分</p>
+            
+            <div className="space-y-2.5 text-[11px] text-gray-600">
+              <div className="flex justify-between border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">用户名</span>
+                <span className="font-bold text-gray-800">{s.username}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">用户 ID</span>
+                <span className="font-mono text-[9px] text-gray-500">{s.userId}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">统计时间戳</span>
+                <span className="font-mono text-gray-400">{new Date(s.reportTimestamp).toLocaleString('zh-CN')}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">总的任务耗时</span>
+                <span className="font-bold text-indigo-600">{s.totalDuration} 秒</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">总的任务准确率</span>
+                <span className="font-black text-indigo-700">{s.totalCorrect}/{s.totalAttempted} ({totalAccuracy})</span>
+              </div>
+
+              {/* 快判明细 */}
+              <div className="mt-4 pt-2">
+                <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-2 border-l-2 border-blue-500 pl-2">快判任务明细</p>
+                <div className="grid grid-cols-1 gap-1.5">
+                   <div className="flex justify-between bg-blue-50/50 p-2 rounded-lg">
+                      <span>初级快判完成</span>
+                      <span className="font-bold">{s.quickEasyCount} 次 | <span className="text-green-600">+{s.quickEasyScore}分</span></span>
+                   </div>
+                   <div className="flex justify-between bg-blue-50/50 p-2 rounded-lg">
+                      <span>中级快判完成</span>
+                      <span className="font-bold">{s.quickMediumCount} 次 | <span className="text-green-600">+{s.quickMediumScore}分</span></span>
+                   </div>
+                   <div className="flex justify-between bg-blue-50/50 p-2 rounded-lg">
+                      <span>高级快判完成</span>
+                      <span className="font-bold">{s.quickHardCount} 次 | <span className="text-green-600">+{s.quickHardScore}分</span></span>
+                   </div>
                 </div>
               </div>
-              <div className="pt-4 border-t border-indigo-200 mt-2 flex justify-between items-center">
-                <span className="font-bold text-indigo-900">累计任务贡献度</span>
-                <span className="text-2xl font-black text-indigo-600">{s.totalScore}</span>
+
+              {/* 采集明细 */}
+              <div className="mt-4 pt-2">
+                <p className="text-[10px] text-green-500 font-black uppercase tracking-widest mb-2 border-l-2 border-green-500 pl-2">采集任务明细</p>
+                <div className="grid grid-cols-1 gap-1.5">
+                   <div className="flex justify-between bg-green-50/50 p-2 rounded-lg">
+                      <span>初级采集完成</span>
+                      <span className="font-bold">{s.collectionEasyCount} 次 | <span className="text-green-600">+{s.collectionEasyScore}分</span></span>
+                   </div>
+                   <div className="flex justify-between bg-green-50/50 p-2 rounded-lg">
+                      <span>中级采集完成</span>
+                      <span className="font-bold">{s.collectionMediumCount} 次 | <span className="text-green-600">+{s.collectionMediumScore}分</span></span>
+                   </div>
+                   <div className="flex justify-between bg-green-50/50 p-2 rounded-lg">
+                      <span>高级采集完成</span>
+                      <span className="font-bold">{s.collectionHardCount} 次 | <span className="text-green-600">+{s.collectionHardScore}分</span></span>
+                   </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t-2 border-indigo-100 flex justify-between items-center">
+                <span className="font-black text-gray-900 text-sm">总的任务贡献度</span>
+                <div className="flex items-baseline">
+                  <span className="text-3xl font-black text-indigo-600">{s.totalScore}</span>
+                  <span className="ml-1 text-[9px] text-indigo-400 font-bold uppercase tracking-widest">Points</span>
+                </div>
               </div>
             </div>
           </div>

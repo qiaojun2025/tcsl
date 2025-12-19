@@ -9,11 +9,51 @@ const App: React.FC = () => {
   const [stats, setStats] = useState<UserStats>(() => {
     const saved = localStorage.getItem('web3_task_stats');
     if (saved) {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      return {
+        userId: parsed.userId || 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
+        username: parsed.username || '探路者',
+        totalDuration: parsed.totalDuration || 0,
+        totalCorrect: parsed.totalCorrect || 0,
+        totalAttempted: parsed.totalAttempted || 0,
+        quickEasyCount: parsed.quickEasyCount || 0,
+        quickEasyScore: parsed.quickEasyScore || 0,
+        quickMediumCount: parsed.quickMediumCount || 0,
+        quickMediumScore: parsed.quickMediumScore || 0,
+        quickHardCount: parsed.quickHardCount || 0,
+        quickHardScore: parsed.quickHardScore || 0,
+        collectionEasyCount: parsed.collectionEasyCount || 0,
+        collectionEasyScore: parsed.collectionEasyScore || 0,
+        collectionMediumCount: parsed.collectionMediumCount || 0,
+        collectionMediumScore: parsed.collectionMediumScore || 0,
+        collectionHardCount: parsed.collectionHardCount || 0,
+        collectionHardScore: parsed.collectionHardScore || 0,
+        quickCount: parsed.quickCount || 0,
+        collectionCount: parsed.collectionCount || 0,
+        quickScore: parsed.quickScore || 0,
+        collectionScore: parsed.collectionScore || 0,
+        totalScore: parsed.totalScore || 0,
+        completions: parsed.completions || {}
+      };
     }
     return {
       userId: 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
       username: '探路者',
+      totalDuration: 0,
+      totalCorrect: 0,
+      totalAttempted: 0,
+      quickEasyCount: 0,
+      quickEasyScore: 0,
+      quickMediumCount: 0,
+      quickMediumScore: 0,
+      quickHardCount: 0,
+      quickHardScore: 0,
+      collectionEasyCount: 0,
+      collectionEasyScore: 0,
+      collectionMediumCount: 0,
+      collectionMediumScore: 0,
+      collectionHardCount: 0,
+      collectionHardScore: 0,
       quickCount: 0,
       collectionCount: 0,
       quickScore: 0,
@@ -27,23 +67,54 @@ const App: React.FC = () => {
     localStorage.setItem('web3_task_stats', JSON.stringify(stats));
   }, [stats]);
 
-  const updateStats = (score: number, type: TaskType, difficulty: Difficulty, category?: CollectionCategory) => {
+  const updateStats = (
+    score: number, 
+    type: TaskType, 
+    difficulty: Difficulty, 
+    performance: { correctCount: number; totalCount: number; duration: number },
+    category?: CollectionCategory
+  ) => {
     setStats(prev => {
       const isQuick = type === TaskType.QUICK_JUDGMENT;
       const completionKey = category ? `${type}_${category}_${difficulty}_${Date.now()}` : `${type}_${difficulty}_${Date.now()}`;
       
-      return {
-        ...prev,
-        quickCount: isQuick ? prev.quickCount + 1 : prev.quickCount,
-        collectionCount: !isQuick ? prev.collectionCount + 1 : prev.collectionCount,
-        quickScore: isQuick ? prev.quickScore + score : prev.quickScore,
-        collectionScore: !isQuick ? prev.collectionScore + score : prev.collectionScore,
-        totalScore: prev.totalScore + score,
-        completions: {
-          ...prev.completions,
-          [completionKey]: Date.now()
+      const newStats = { ...prev };
+      
+      newStats.totalDuration += performance.duration;
+      newStats.totalCorrect += performance.correctCount;
+      newStats.totalAttempted += performance.totalCount;
+      newStats.totalScore += score;
+      newStats.completions[completionKey] = Date.now();
+
+      if (isQuick) {
+        newStats.quickCount += 1;
+        newStats.quickScore += score;
+        if (difficulty === Difficulty.EASY) {
+          newStats.quickEasyCount += 1;
+          newStats.quickEasyScore += score;
+        } else if (difficulty === Difficulty.MEDIUM) {
+          newStats.quickMediumCount += 1;
+          newStats.quickMediumScore += score;
+        } else if (difficulty === Difficulty.HARD) {
+          newStats.quickHardCount += 1;
+          newStats.quickHardScore += score;
         }
-      };
+      } else {
+        newStats.collectionCount += 1;
+        newStats.collectionScore += score;
+        if (difficulty === Difficulty.EASY) {
+          newStats.collectionEasyCount += 1;
+          newStats.collectionEasyScore += score;
+        } else if (difficulty === Difficulty.MEDIUM) {
+          newStats.collectionMediumCount += 1;
+          newStats.collectionMediumScore += score;
+        } else if (difficulty === Difficulty.HARD) {
+          newStats.collectionHardCount += 1;
+          newStats.collectionHardScore += score;
+        }
+      }
+
+      return newStats;
     });
   };
 
@@ -59,7 +130,6 @@ const App: React.FC = () => {
         />
       )}
       
-      {/* Tab Bar (Only on List View) */}
       {currentView === 'list' && (
         <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 flex justify-around items-center h-16 px-6 z-50">
           <button className="text-blue-600"><HomeIcon /></button>
