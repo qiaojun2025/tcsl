@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TaskType, Difficulty, CollectionCategory } from '../types.ts';
 import { getPlaceholderImage, getRandomCategory, CATEGORIES } from '../services/imageRecognition.ts';
 
@@ -7,7 +7,7 @@ interface TaskFlowProps {
   type: TaskType;
   category?: CollectionCategory;
   difficulty: Difficulty;
-  onComplete: (score: number, type: TaskType, details: string) => void;
+  onComplete: (score: number, type: TaskType, performance: { correctCount: number; totalCount: number; startTime: number; endTime: number }) => void;
   onCancel: () => void;
 }
 
@@ -48,6 +48,8 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
   const [step, setStep] = useState(1);
   const [totalSteps] = useState(10);
   const [score, setScore] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [startTime] = useState(Date.now());
   const [currentTask, setCurrentTask] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -143,15 +145,28 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
 
   const submitResult = (isCorrect: boolean | 'skipped') => {
     if (feedback) return;
-    setFeedback(isCorrect === 'skipped' ? 'skipped' : (isCorrect ? 'correct' : 'wrong'));
-    const pts = isCorrect === true ? getPoints() : 0;
+    const isActuallyCorrect = isCorrect === true;
+    setFeedback(isCorrect === 'skipped' ? 'skipped' : (isActuallyCorrect ? 'correct' : 'wrong'));
+    
+    const pts = isActuallyCorrect ? getPoints() : 0;
+    
     setTimeout(() => {
-      setScore(prev => prev + pts);
+      const newScore = score + pts;
+      const newCorrectCount = isActuallyCorrect ? correctCount + 1 : correctCount;
+      
+      setScore(newScore);
+      setCorrectCount(newCorrectCount);
+
       if (step < totalSteps) {
         setStep(prev => prev + 1);
         generateNewTask();
       } else {
-        onComplete(score + pts, type, `圆满完成任务系列`);
+        onComplete(newScore, type, {
+          correctCount: newCorrectCount,
+          totalCount: totalSteps,
+          startTime: startTime,
+          endTime: Date.now()
+        });
       }
     }, 1000);
   };

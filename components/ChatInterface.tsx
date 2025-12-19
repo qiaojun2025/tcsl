@@ -24,7 +24,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
 
   useEffect(() => {
     const welcomeId = Date.now().toString();
-    // Welcome message + Three buttons as requested
     setMessages([{
       id: welcomeId,
       sender: 'agent',
@@ -76,7 +75,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
     }, 400);
   };
 
-  const handleTaskComplete = (score: number, type: TaskType, details: string) => {
+  const handleTaskComplete = (score: number, type: TaskType, performance: { correctCount: number; totalCount: number; startTime: number; endTime: number }) => {
     const d = activeTask?.difficulty || Difficulty.EASY;
     const c = activeTask?.category;
     
@@ -85,12 +84,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
 
     const reportData = {
       username: stats.username,
-      timestamp: Date.now(),
+      userId: stats.userId,
+      timestamp: performance.endTime,
+      startTime: performance.startTime,
+      duration: Math.floor((performance.endTime - performance.startTime) / 1000),
       type: type,
       difficulty: d,
       category: c,
-      score: score,
-      details: details
+      accuracy: `${performance.correctCount}/${performance.totalCount}`,
+      score: score
     };
     
     addMessage(reportData, 'agent', 'task-report');
@@ -141,19 +143,47 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, onBack, onUpdateSt
       case 'task-report':
         const r = msg.payload;
         return (
-          <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm w-full">
-            <h4 className="font-bold text-blue-800 mb-3 flex items-center">
-               <span className="mr-2">📋</span> 任务日报
+          <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-lg w-full">
+            <h4 className="font-black text-blue-900 mb-4 flex items-center justify-between">
+               <span className="flex items-center"><span className="mr-2">📋</span> 任务日报</span>
+               <span className="text-[8px] bg-blue-50 text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 uppercase tracking-tighter">Verified</span>
             </h4>
-            <div className="space-y-1.5 text-xs text-gray-600">
-              <div className="flex justify-between border-b pb-1"><span>用户名</span> <span className="font-bold">{r.username}</span></div>
-              <div className="flex justify-between border-b pb-1"><span>时间戳</span> <span className="font-mono">{r.timestamp}</span></div>
-              <div className="flex justify-between border-b pb-1"><span>任务类型</span> <span className="font-bold">{r.type}</span></div>
-              <div className="flex justify-between border-b pb-1"><span>难度</span> <span>{r.difficulty}</span></div>
-              {r.category && <div className="flex justify-between border-b pb-1"><span>分类</span> <span>{r.category}</span></div>}
-              <div className="pt-3 flex justify-between items-center">
-                <span className="font-bold text-gray-800">本次贡献得分</span>
-                <span className="text-green-600 font-black text-xl">+{r.score}</span>
+            <div className="space-y-2 text-[11px] text-gray-600">
+              <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">贡献用户</span>
+                <span className="font-bold text-gray-800">{r.username}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">用户 ID</span>
+                <span className="font-mono text-[9px] text-gray-500">{r.userId}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">任务类型</span>
+                <span className="font-bold text-blue-600">{r.type}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">任务级别</span>
+                <span className="bg-gray-100 px-2 py-0.5 rounded text-[10px]">{r.difficulty}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">开始时间</span>
+                <span className="text-gray-500">{new Date(r.startTime).toLocaleTimeString()}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">任务耗时</span>
+                <span className="font-bold">{r.duration} 秒</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-50 pb-1.5">
+                <span className="text-gray-400">任务准确率</span>
+                <span className={`font-black ${r.accuracy.startsWith('10/10') ? 'text-green-600' : 'text-blue-600'}`}>{r.accuracy}</span>
+              </div>
+              
+              <div className="pt-4 flex justify-between items-center">
+                <span className="font-black text-gray-900 text-sm">获得贡献度</span>
+                <div className="flex items-baseline">
+                  <span className="text-2xl font-black text-green-600">+{r.score}</span>
+                  <span className="ml-1 text-[8px] text-green-400 font-bold uppercase">Points</span>
+                </div>
               </div>
             </div>
           </div>
