@@ -11,10 +11,11 @@ export enum TaskType {
 }
 
 export enum CollectionCategory {
-  IMAGE = '图片采集',
-  VIDEO = '视频采集',
-  AUDIO = '音频采集',
-  TEXT = '文本采集'
+  ANIMAL = '动物类',
+  PLANT = '植物类',
+  PERSON = '人物类',
+  STREET = '街景类',
+  LIFE = '生活类'
 }
 
 export interface TaskRecord {
@@ -34,7 +35,6 @@ export interface UserStats {
   quickScore: number;
   collectionScore: number;
   totalScore: number;
-  // Key format: "TaskType_Difficulty_Timestamp"
   completions: Record<string, number>;
 }
 
