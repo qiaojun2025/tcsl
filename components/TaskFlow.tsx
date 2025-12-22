@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { TaskType, Difficulty, CollectionCategory } from '../types.ts';
 import { getPlaceholderImage, getRandomCategory, CATEGORIES } from '../services/imageRecognition.ts';
@@ -20,28 +19,106 @@ const COLLECTION_POOLS: Record<CollectionCategory, Record<Difficulty, string[]>>
   [CollectionCategory.ANIMAL]: {
     [Difficulty.EASY]: ['白色的狗', '黑色的猫', '小黄鸭', '金鱼', '彩色鹦鹉', '长耳朵兔子', '小乌龟', '白色公鸡', '花斑奶牛', '黑色小羊'],
     [Difficulty.MEDIUM]: ['草丛里的老虎', '森林里的狮子', '树上的猴子', '奔跑的豹子', '展翅的苍鹰', '吃竹子的熊猫', '河边的大象', '吃树叶的长颈鹿', '草原上的斑马', '嚎叫的灰狼'],
-    [Difficulty.HARD]: ['正在捕猎的狮子', '正在睡觉的老虎', '正在嬉戏的幼狮', '成群迁徙的斑马', '正在筑巢的鸟儿', '跃出水面的海豚', '正在蜕皮的蛇', '正在捕鱼的棕熊', '冰面上的企鹅', '袋鼠育儿袋里的幼崽']
+    [Difficulty.HARD]: [
+        '请拍摄一张动物正在捕猎的照片', 
+        '请拍摄一张动物正在睡觉的照片', 
+        '请拍摄一张动物正在嬉戏的照片', 
+        '请拍摄一张动物群体迁徙的照片', 
+        '请拍摄一张鸟儿正在筑巢的照片', 
+        '请拍摄一张动物跃出水面的照片', 
+        '请拍摄一张动物正在蜕皮或换毛的照片', 
+        '请拍摄一张动物正在捕鱼的照片', 
+        '请拍摄一张动物在冰雪环境中的照片', 
+        '请拍摄一张母兽与幼崽互动的照片'
+    ]
   },
   [CollectionCategory.PLANT]: {
     [Difficulty.EASY]: ['红色的玫瑰', '绿色的梧桐树叶', '仙人掌', '多肉植物', '向日葵', '郁金香', '吊兰', '菊花', '芦荟', '牵牛花'],
     [Difficulty.MEDIUM]: ['公园里的梧桐树大道', '盛开的玫瑰花园', '原始森林里的古树', '沙漠中的绿洲植物', '大片盛开的薰衣草田', '挺拔的白杨树', '垂落的柳树枝条', '高大的棕榈树', '红色的枫叶林', '清新的竹林'],
-    [Difficulty.HARD]: ['阳光穿过梧桐树叶的瞬间', '沾满露水的玫瑰花瓣', '正在开花的仙人掌', '枯木逢春的新芽', '雨滴打在荷叶上的瞬间', '含苞待放的梅花', '秋天第一片飘落的枫叶', '正在向阳转动的向日葵', '树缝间洒下的丁达尔效应', '极地冻土上的苔藓']
+    [Difficulty.HARD]: [
+        '请拍摄一张阳光穿过树叶的照片', 
+        '请拍摄一张沾满露水的花瓣或叶子的照片', 
+        '请拍摄一张正在开花的非典型植物（如仙人掌）的照片', 
+        '请拍摄一张枯木上长出新芽的照片', 
+        '请拍摄一张雨滴打在植物上的照片', 
+        '请拍摄一张含苞待放的花朵特写', 
+        '请拍摄一张秋天落叶的照片', 
+        '请拍摄一张植物向阳生长的照片', 
+        '请拍摄一张有丁达尔效应的森林照片', 
+        '请拍摄一张恶劣环境（如冻土、沙漠）中的植物照片'
+    ]
   },
   [CollectionCategory.PERSON]: {
     [Difficulty.EASY]: ['手部照片', '腿部照片', '头发特写', '肩膀照片', '背影照片', '手臂特写', '脚步特写', '耳朵特写', '指甲特写', '颈部照片'],
     [Difficulty.MEDIUM]: ['正在写字的手', '正在跑步的腿', '正在整理头发的动作', '在敲击键盘的手', '正在走路的姿态', '在拿水杯的手', '正在阅读的侧影', '正在系鞋带的动作', '正在挥手告别的姿态', '正在思考时的手托腮'],
-    [Difficulty.HARD]: ['弹钢琴的手部特写', '跨栏瞬间的腿部肌肉', '正在编织头发的过程', '高难度瑜伽动作中的肢体', '手术室中主刀医生的手', '精密组装工人的手指动作', '书法家运笔时的手势', '舞蹈演员旋转时的足尖', '攀岩者扣住岩点的指关节', '正在完成投篮动作的手部轨迹'],
+    [Difficulty.HARD]: [
+        '请拍摄一张手正在弹钢琴的照片', 
+        '请拍摄一张运动员正在跨栏的照片', 
+        '请拍摄一张正在编织头发的照片', 
+        '请拍摄一张人物正在做高难度瑜伽动作的照片', 
+        '请拍摄一张外科医生正在做手术的照片', 
+        '请拍摄一张工人正在进行精密组装的照片', 
+        '请拍摄一张书法家正在写字的照片', 
+        '请拍摄一张舞蹈演员正在跳舞的照片', 
+        '请拍摄一张攀岩者正在攀岩的照片', 
+        '请拍摄一张篮球运动员正在投篮的照片'
+    ]
   },
   [CollectionCategory.STREET]: {
     [Difficulty.EASY]: ['城市街道', '农村田野', '乡镇集市', '学校操场', '社区公园', '公交车站', '天桥景观', '火车站广场景观', '购物中心门口', '安静的居民区街道'],
     [Difficulty.MEDIUM]: ['南京市图书馆正面', '西安农村的麦田', '繁华的上海南京路', '古老的江南水乡小巷', '标志性的城市钟楼', '跨海大桥的宏伟远景', '热闹的夜市摊位', '清晨无人的步行街', '充满涂鸦的艺术街区', '老旧斑驳的弄堂口'],
-    [Difficulty.HARD]: ['南京市图书馆内阅读的场景', '西安农村田野里的收割机', '上海南京路夜晚的霓虹灯', '古镇雨后的青石板路倒影', '清晨环卫工人清扫街道的背影', '雨中繁忙的十字路口伞阵', '老街正在收摊的商贩', '灯火辉煌的CBD建筑群', '冬日里被雪覆盖的小镇主街', '夕阳映射在玻璃幕墙上的街道'],
+    [Difficulty.HARD]: [
+        '请拍摄一张人们在图书馆内阅读的照片', 
+        '请拍摄一张田野里收割机正在工作的照片', 
+        '请拍摄一张城市夜晚霓虹闪烁的街道照片', 
+        '请拍摄一张雨后古镇的倒影照片', 
+        '请拍摄一张环卫工人正在清扫街道的照片', 
+        '请拍摄一张雨中十字路口的照片', 
+        '请拍摄一张夜市收摊时的照片', 
+        '请拍摄一张灯火辉煌的CBD建筑群照片', 
+        '请拍摄一张被雪覆盖的街道照片', 
+        '请拍摄一张夕阳映照在建筑上的照片'
+    ]
   },
   [CollectionCategory.LIFE]: {
     [Difficulty.EASY]: ['家庭作业图片', '做饭的原材料', '待洗的碗筷', '扫把和簸箕', '一杯热咖啡', '摊开的书本', '挂在架子上的钥匙', '整齐的床铺', '整理好的书包', '阳台上的晾衣架'],
     [Difficulty.MEDIUM]: ['认真书写的家庭作业', '正在锅里翻炒的菜肴', '水槽里打满泡沫的碗筷', '整洁干净的房间', '充满蒸汽的浴室一角', '正在充电的电子设备', '正在浇灌阳台花卉', '摆放整齐的书架', '热气腾腾的晚餐桌面', '正在使用的健身器材'],
-    [Difficulty.HARD]: ['你正在洗碗的实时照片', '你正在打扫房间的瞬间', '你正在做饭的动作特写', '你正在整理书桌的实时记录', '你正在熨烫衣服的过程', '你正在修补破损物品的动作', '你正在组装家具的实时画面', '你正在练习书法或绘画的动作', '你正在给宠物洗澡的过程', '你正在整理衣柜内衣物的瞬间']
+    [Difficulty.HARD]: [
+        '请在30分钟内，拍摄一张你正在洗碗的照片', 
+        '请在30分钟内，拍摄一张你正在打扫房间的照片', 
+        '请在30分钟内，拍摄一张你正在做饭的照片', 
+        '请在30分钟内，拍摄一张你正在整理书桌的照片', 
+        '请在30分钟内，拍摄一张你正在熨烫衣服的照片', 
+        '请在30分钟内，拍摄一张你正在修理东西的照片', 
+        '请在30分钟内，拍摄一张你正在组装家具的照片', 
+        '请在30分钟内，拍摄一张你正在练习乐器的照片', 
+        '请在30分钟内，拍摄一张你正在给宠物洗澡的照片', 
+        '请在30分钟内，拍摄一张你正在整理衣柜的照片'
+    ]
   }
+};
+
+const getSubmittedImageHashes = (): Set<string> => {
+    try {
+        const hashes = localStorage.getItem('submitted_image_hashes');
+        return hashes ? new Set(JSON.parse(hashes)) : new Set();
+    } catch (e) {
+        console.error("Failed to parse image hashes from localStorage", e);
+        return new Set();
+    }
+};
+
+const addSubmittedImageHash = (hash: string) => {
+    const hashes = getSubmittedImageHashes();
+    hashes.add(hash);
+    localStorage.setItem('submitted_image_hashes', JSON.stringify(Array.from(hashes)));
+};
+
+const computeFileHash = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
 const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onComplete, onCancel }) => {
@@ -56,6 +133,8 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'skipped' | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [usedTasks, setUsedTasks] = useState<Set<string>>(new Set());
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const getPoints = () => {
     if (difficulty === Difficulty.EASY) return 1;
@@ -95,9 +174,9 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
           })).sort(() => Math.random() - 0.5)
         });
       } else {
-        setTimeLeft(7);
+        setTimeLeft(10);
         setCurrentTask({
-          title: `请在7秒内选出所有【${targetZh}】`,
+          title: `请在10秒内选出所有【${targetZh}】`,
           target,
           images: Array.from({length: 6}).map((_, i) => ({ 
             id: i, url: getPlaceholderImage(i < 3 ? target : getRandomCategory()), 
@@ -141,6 +220,34 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
       return img && img.cat === currentTask.target;
     });
     submitResult(isCorrect);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) {
+        return;
+    }
+    const file = event.target.files[0];
+    setIsUploading(true);
+
+    try {
+        const hash = await computeFileHash(file);
+        const submittedHashes = getSubmittedImageHashes();
+
+        if (submittedHashes.has(hash)) {
+            setShowDuplicateWarning(true);
+            setTimeout(() => setShowDuplicateWarning(false), 3000);
+            event.target.value = '';
+            return;
+        }
+
+        addSubmittedImageHash(hash);
+        submitResult(true);
+
+    } catch (error) {
+        console.error("Error processing file:", error);
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   const submitResult = (isCorrect: boolean | 'skipped') => {
@@ -228,11 +335,21 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
             )}
             {difficulty === Difficulty.HARD && currentTask.images && (
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-2">
-                  {currentTask.images.map((img: any) => (
-                    <div key={img.id} onClick={() => setSelectedIds(prev => prev.includes(img.id) ? prev.filter(x => x !== img.id) : [...prev, img.id])} className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all border-2 ${selectedIds.includes(img.id) ? 'border-blue-500' : 'border-transparent'}`}>
-                      <img src={img.url} className="w-full h-full object-cover" alt="Multi Option" />
-                      {selectedIds.includes(img.id) && <div className="absolute top-1 right-1 bg-blue-500 rounded-full text-white p-0.5"><svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg></div>}
+                <div className="space-y-2">
+                  {currentTask.images.map((img: any, index: number) => (
+                    <div
+                      key={img.id}
+                      onClick={() => setSelectedIds(prev => prev.includes(img.id) ? prev.filter(x => x !== img.id) : [...prev, img.id])}
+                      className={`flex items-center p-2 space-x-4 rounded-xl cursor-pointer transition-all border-2 ${selectedIds.includes(img.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}
+                      role="checkbox"
+                      aria-checked={selectedIds.includes(img.id)}
+                      tabIndex={0}
+                    >
+                      <img src={img.url} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" alt={`选项 ${index + 1}`} />
+                      <div className="flex-1 font-semibold text-gray-800">图片选项 {index + 1}</div>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 flex-shrink-0 transition-all ${selectedIds.includes(img.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'}`}>
+                        {selectedIds.includes(img.id) && <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -245,7 +362,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
             <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center justify-center bg-gray-50">
               <span className="text-4xl mb-2">{difficulty === Difficulty.HARD ? '📸' : '🖼️'}</span>
               <p className="text-[10px] text-gray-400 text-center font-medium leading-relaxed">
-                {difficulty === Difficulty.HARD ? '高级采集：系统相册已禁用，请开启摄像头实时拍摄行为照片' : (difficulty === Difficulty.MEDIUM ? '中级采集：支持上传，将严审时间与位置信息' : '初级采集：支持从相册选取或拍照')}
+                {difficulty === Difficulty.HARD ? '高级采集：请根据任务提示，在规定时间内拍摄或上传一张真实的行为照片。' : (difficulty === Difficulty.MEDIUM ? '中级采集：支持上传，将严审时间与位置信息' : '初级采集：支持从相册选取或拍照')}
               </p>
             </div>
             <input 
@@ -253,12 +370,24 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
               className="hidden" 
               id="upload" 
               accept="image/*" 
-              capture={difficulty === Difficulty.HARD ? 'environment' : undefined} 
-              onChange={(e) => { if(e.target.files?.length) submitResult(true); }} 
+              onChange={handleFileUpload}
+              disabled={isUploading}
             />
-            <label htmlFor="upload" className="block w-full py-4 rounded-xl bg-green-600 text-white font-black text-center cursor-pointer shadow-lg active:bg-green-700 active:scale-[0.98] transition-all">
-              {difficulty === Difficulty.HARD ? '立即开启摄像头拍摄' : '点击上传/采集图片'}
+            <label htmlFor="upload" className={`block w-full py-4 rounded-xl text-white font-black text-center shadow-lg active:scale-[0.98] transition-all ${isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 active:bg-green-700 cursor-pointer'}`}>
+              {isUploading ? (
+                  <div className="flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      <span>正在校验图片...</span>
+                  </div>
+              ) : (
+                  '点击上传/拍摄照片'
+              )}
             </label>
+            {showDuplicateWarning && (
+                <div className="text-center text-red-500 bg-red-50 border border-red-200 p-2 rounded-lg text-xs font-bold animate-shake">
+                    您已提交过这张图片，请选择一张新的图片。
+                </div>
+            )}
             <button onClick={() => submitResult('skipped')} className="w-full text-gray-400 text-[10px] font-bold uppercase py-2 tracking-widest">跳过此项任务</button>
           </div>
         )}

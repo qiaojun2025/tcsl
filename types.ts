@@ -18,14 +18,19 @@ export enum CollectionCategory {
   LIFE = '生活类'
 }
 
-export interface TaskRecord {
+export interface TaskCompletionRecord {
   id: string;
   timestamp: number;
+  startTime: number;
+  duration: number;
   type: TaskType;
   difficulty: Difficulty;
+  category?: CollectionCategory;
   score: number;
-  details: string;
+  correctCount: number;
+  totalCount: number;
 }
+
 
 export interface UserStats {
   userId: string;
@@ -55,7 +60,6 @@ export interface UserStats {
   quickScore: number;
   collectionScore: number;
   totalScore: number;
-  completions: Record<string, number>;
 }
 
 export interface Agent {

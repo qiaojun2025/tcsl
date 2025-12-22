@@ -2,114 +2,79 @@
 import React, { useState, useEffect } from 'react';
 import AgentList from './components/AgentList.tsx';
 import ChatInterface from './components/ChatInterface.tsx';
-import { UserStats, TaskType, Difficulty, CollectionCategory } from './types.ts';
+import { UserStats, TaskType, Difficulty, CollectionCategory, TaskCompletionRecord } from './types.ts';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
+  
   const [stats, setStats] = useState<UserStats>(() => {
-    const saved = localStorage.getItem('web3_task_stats');
+    const saved = localStorage.getItem('web3_task_stats_cumulative');
     if (saved) {
       try {
-        const p = JSON.parse(saved);
-        // Ensure all numeric fields exist
-        const s = {
-          userId: p.userId || 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
-          username: p.username || '探路者',
-          totalDuration: Number(p.totalDuration) || 0,
-          totalCorrect: Number(p.totalCorrect) || 0,
-          totalAttempted: Number(p.totalAttempted) || 0,
-          
-          quickEasyCount: Number(p.quickEasyCount) || 0,
-          quickEasyScore: Number(p.quickEasyScore) || 0,
-          quickMediumCount: Number(p.quickMediumCount) || 0,
-          quickMediumScore: Number(p.quickMediumScore) || 0,
-          quickHardCount: Number(p.quickHardCount) || 0,
-          quickHardScore: Number(p.quickHardScore) || 0,
-          
-          collectionEasyCount: Number(p.collectionEasyCount) || 0,
-          collectionEasyScore: Number(p.collectionEasyScore) || 0,
-          collectionMediumCount: Number(p.collectionMediumCount) || 0,
-          collectionMediumScore: Number(p.collectionMediumScore) || 0,
-          collectionHardCount: Number(p.collectionHardCount) || 0,
-          collectionHardScore: Number(p.collectionHardScore) || 0,
-          
-          completions: p.completions || {},
-          
-          // Derived totals (calculated below for safety)
-          quickCount: 0,
-          collectionCount: 0,
-          quickScore: 0,
-          collectionScore: 0,
-          totalScore: 0
-        };
-
-        // Recalculate aggregate totals for data integrity
-        s.quickCount = s.quickEasyCount + s.quickMediumCount + s.quickHardCount;
-        s.quickScore = s.quickEasyScore + s.quickMediumScore + s.quickHardScore;
-        
-        s.collectionCount = s.collectionEasyCount + s.collectionMediumCount + s.collectionHardCount;
-        s.collectionScore = s.collectionEasyScore + s.collectionMediumScore + s.collectionHardScore;
-        
-        s.totalScore = s.quickScore + s.collectionScore;
-
-        return s;
+        return JSON.parse(saved);
       } catch (e) {
-        console.error("Failed to parse stats", e);
+        console.error("Failed to parse cumulative stats", e);
       }
     }
-    
     return {
       userId: 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
       username: '探路者',
-      totalDuration: 0,
-      totalCorrect: 0,
-      totalAttempted: 0,
-      quickEasyCount: 0,
-      quickEasyScore: 0,
-      quickMediumCount: 0,
-      quickMediumScore: 0,
-      quickHardCount: 0,
-      quickHardScore: 0,
-      collectionEasyCount: 0,
-      collectionEasyScore: 0,
-      collectionMediumCount: 0,
-      collectionMediumScore: 0,
-      collectionHardCount: 0,
-      collectionHardScore: 0,
-      quickCount: 0,
-      collectionCount: 0,
-      quickScore: 0,
-      collectionScore: 0,
-      totalScore: 0,
-      completions: {}
+      totalDuration: 0, totalCorrect: 0, totalAttempted: 0,
+      quickEasyCount: 0, quickEasyScore: 0,
+      quickMediumCount: 0, quickMediumScore: 0,
+      quickHardCount: 0, quickHardScore: 0,
+      collectionEasyCount: 0, collectionEasyScore: 0,
+      collectionMediumCount: 0, collectionMediumScore: 0,
+      collectionHardCount: 0, collectionHardScore: 0,
+      quickCount: 0, collectionCount: 0, quickScore: 0, collectionScore: 0, totalScore: 0
     };
   });
 
+  const [taskRecords, setTaskRecords] = useState<TaskCompletionRecord[]>(() => {
+    const saved = localStorage.getItem('web3_task_records');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+
   useEffect(() => {
-    localStorage.setItem('web3_task_stats', JSON.stringify(stats));
+    localStorage.setItem('web3_task_stats_cumulative', JSON.stringify(stats));
   }, [stats]);
 
-  const updateStats = (
+  useEffect(() => {
+    localStorage.setItem('web3_task_records', JSON.stringify(taskRecords));
+  }, [taskRecords]);
+
+  const handleUpdateTaskCompletion = (
     score: number, 
     type: TaskType, 
     difficulty: Difficulty, 
-    performance: { correctCount: number; totalCount: number; duration: number },
+    performance: { correctCount: number; totalCount: number; startTime: number; endTime: number },
     category?: CollectionCategory
   ) => {
+    const duration = Math.round((performance.endTime - performance.startTime) / 1000);
+
+    const newRecord: TaskCompletionRecord = {
+      id: `TASK-${performance.endTime}-${Math.random().toString(36).substr(2, 5)}`,
+      timestamp: performance.endTime,
+      startTime: performance.startTime,
+      duration,
+      type,
+      difficulty,
+      category,
+      score,
+      correctCount: performance.correctCount,
+      totalCount: performance.totalCount,
+    };
+    setTaskRecords(prev => [...prev, newRecord]);
+
     setStats(prev => {
       const isQuick = type === TaskType.QUICK_JUDGMENT;
-      const timestamp = Date.now();
-      const completionKey = category ? `${type}_${category}_${difficulty}_${timestamp}` : `${type}_${difficulty}_${timestamp}`;
+      const newStats = { ...prev };
       
-      // Deep copy numeric stats but shallow copy object references we plan to spread
-      const newStats = { ...prev, completions: { ...prev.completions, [completionKey]: timestamp } };
-      
-      // 1. Update Global Performance Metrics
-      newStats.totalDuration += performance.duration;
+      newStats.totalDuration += duration;
       newStats.totalCorrect += performance.correctCount;
       newStats.totalAttempted += performance.totalCount;
 
-      // 2. Update Specific Difficulty/Type Buckets
       if (isQuick) {
         if (difficulty === Difficulty.EASY) {
           newStats.quickEasyCount += 1;
@@ -134,7 +99,6 @@ const App: React.FC = () => {
         }
       }
 
-      // 3. Recalculate All Aggregate Totals to prevent any possibility of sync issues
       newStats.quickCount = newStats.quickEasyCount + newStats.quickMediumCount + newStats.quickHardCount;
       newStats.quickScore = newStats.quickEasyScore + newStats.quickMediumScore + newStats.quickHardScore;
       
@@ -154,8 +118,9 @@ const App: React.FC = () => {
       ) : (
         <ChatInterface 
           stats={stats} 
+          taskRecords={taskRecords}
           onBack={() => setCurrentView('list')} 
-          onUpdateStats={updateStats}
+          onUpdateTaskCompletion={handleUpdateTaskCompletion}
         />
       )}
       
