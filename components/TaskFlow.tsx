@@ -157,7 +157,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
       if (difficulty === Difficulty.EASY) {
         const other = CATEGORIES.filter(c => c !== target)[0] || (target === 'dog' ? 'cat' : 'dog');
         setCurrentTask({ 
-          title: `请识别：哪个是【${targetZh}】？`, 
+          title: `请判断下图中的主要内容是什么？`, 
           target, 
           imageUrl: getPlaceholderImage(target),
           options: [{ id: target, label: targetZh }, { id: other, label: CATEGORY_MAP[other] || other }].sort(() => Math.random() - 0.5)
