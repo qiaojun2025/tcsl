@@ -15,7 +15,8 @@ export enum CollectionCategory {
   PLANT = '植物类',
   PERSON = '人物类',
   STREET = '街景类',
-  LIFE = '生活类'
+  LIFE = '生活类',
+  AUDIO = '音频类'
 }
 
 export interface TaskCompletionRecord {

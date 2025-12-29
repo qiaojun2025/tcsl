@@ -17,83 +17,121 @@ const CATEGORY_MAP: Record<string, string> = {
 
 const COLLECTION_POOLS: Record<CollectionCategory, Record<Difficulty, string[]>> = {
   [CollectionCategory.ANIMAL]: {
-    [Difficulty.EASY]: ['白色的狗', '黑色的猫', '小黄鸭', '金鱼', '彩色鹦鹉', '长耳朵兔子', '小乌龟', '白色公鸡', '花斑奶牛', '黑色小羊'],
-    [Difficulty.MEDIUM]: ['草丛里的老虎', '森林里的狮子', '树上的猴子', '奔跑的豹子', '展翅的苍鹰', '吃竹子的熊猫', '河边的大象', '吃树叶的长颈鹿', '草原上的斑马', '嚎叫的灰狼'],
+    [Difficulty.EASY]: ['狗', '猫', '老虎', '狮子', '兔子', '仓鼠', '金鱼', '乌龟', '鹦鹉', '鸭子'],
+    [Difficulty.MEDIUM]: ['白色的狗', '黑色的猫', '正在奔跑的马', '睡着的考拉', '吃竹子的熊猫', '树上的猴子', '飞翔的老鹰', '水里的河马', '斑点狗', '三花猫'],
     [Difficulty.HARD]: [
-        '请拍摄一张动物正在捕猎的照片', 
-        '请拍摄一张动物正在睡觉的照片', 
-        '请拍摄一张动物正在嬉戏的照片', 
-        '请拍摄一张动物群体迁徙的照片', 
-        '请拍摄一张鸟儿正在筑巢的照片', 
-        '请拍摄一张动物跃出水面的照片', 
-        '请拍摄一张动物正在蜕皮或换毛的照片', 
-        '请拍摄一张动物正在捕鱼的照片', 
-        '请拍摄一张动物在冰雪环境中的照片', 
-        '请拍摄一张母兽与幼崽互动的照片'
+        '请拍摄一张狗正在接飞盘的照片', 
+        '请拍摄一张猫正在捕猎玩具的照片', 
+        '请拍摄一张鸟儿喂食幼鸟的照片', 
+        '请拍摄一群蚂蚁搬家的照片', 
+        '请拍摄一张鱼跃出水面的照片', 
+        '请拍摄一张宠物正在洗澡的照片', 
+        '请拍摄一张动物打哈欠的照片', 
+        '请拍摄一张蝴蝶停在花朵上的照片', 
+        '请拍摄一张蜘蛛织网的照片', 
+        '请拍摄一张壁虎爬墙的照片'
     ]
   },
   [CollectionCategory.PLANT]: {
-    [Difficulty.EASY]: ['红色的玫瑰', '绿色的梧桐树叶', '仙人掌', '多肉植物', '向日葵', '郁金香', '吊兰', '菊花', '芦荟', '牵牛花'],
-    [Difficulty.MEDIUM]: ['公园里的梧桐树大道', '盛开的玫瑰花园', '原始森林里的古树', '沙漠中的绿洲植物', '大片盛开的薰衣草田', '挺拔的白杨树', '垂落的柳树枝条', '高大的棕榈树', '红色的枫叶林', '清新的竹林'],
+    [Difficulty.EASY]: ['玫瑰', '梧桐树', '向日葵', '仙人掌', '荷花', '柳树', '银杏叶', '蒲公英', '竹子', '梅花'],
+    [Difficulty.MEDIUM]: ['盛开的红玫瑰', '秋天的梧桐树叶', '带刺的仙人掌', '紫色的薰衣草', '白色的百合花', '巨大的榕树', '爬满墙的爬山虎', '多肉植物特写', '水中的睡莲', '松树的松果'],
     [Difficulty.HARD]: [
-        '请拍摄一张阳光穿过树叶的照片', 
-        '请拍摄一张沾满露水的花瓣或叶子的照片', 
-        '请拍摄一张正在开花的非典型植物（如仙人掌）的照片', 
-        '请拍摄一张枯木上长出新芽的照片', 
-        '请拍摄一张雨滴打在植物上的照片', 
-        '请拍摄一张含苞待放的花朵特写', 
-        '请拍摄一张秋天落叶的照片', 
-        '请拍摄一张植物向阳生长的照片', 
-        '请拍摄一张有丁达尔效应的森林照片', 
-        '请拍摄一张恶劣环境（如冻土、沙漠）中的植物照片'
+        '请拍摄一张阳光透过树叶（丁达尔效应）的照片', 
+        '请拍摄一张雨后沾满露水的花瓣照片', 
+        '请拍摄一张植物种子破土而出的照片', 
+        '请拍摄一张枯木逢春（老树发新芽）的照片', 
+        '请拍摄一张花朵正在绽放过程的照片', 
+        '请拍摄一张风吹麦浪的照片', 
+        '请拍摄一张树根错综复杂的特写照片', 
+        '请拍摄一张苔藓微观世界的照片', 
+        '请拍摄一张落叶铺满地面的照片', 
+        '请拍摄一张果实挂满枝头的照片'
     ]
   },
   [CollectionCategory.PERSON]: {
-    [Difficulty.EASY]: ['手部照片', '腿部照片', '头发特写', '肩膀照片', '背影照片', '手臂特写', '脚步特写', '耳朵特写', '指甲特写', '颈部照片'],
-    [Difficulty.MEDIUM]: ['正在写字的手', '正在跑步的腿', '正在整理头发的动作', '在敲击键盘的手', '正在走路的姿态', '在拿水杯的手', '正在阅读的侧影', '正在系鞋带的动作', '正在挥手告别的姿态', '正在思考时的手托腮'],
+    [Difficulty.EASY]: ['手部照片', '腿部照片', '正脸自拍', '侧脸照片', '背影照片', '脚部特写', '眼睛特写', '耳朵特写', '头发特写', '手臂照片'],
+    [Difficulty.MEDIUM]: ['带手表的手腕', '穿着运动鞋的脚', '戴眼镜的人像', '扎马尾的背影', '涂指甲油的手', '穿着西装的半身像', '戴帽子的人像', '穿着裙子的全身像', '正在看书的侧脸', '拿着手机的手'],
     [Difficulty.HARD]: [
-        '请拍摄一张手正在弹钢琴的照片', 
-        '请拍摄一张运动员正在跨栏的照片', 
-        '请拍摄一张正在编织头发的照片', 
-        '请拍摄一张人物正在做高难度瑜伽动作的照片', 
-        '请拍摄一张外科医生正在做手术的照片', 
-        '请拍摄一张工人正在进行精密组装的照片', 
-        '请拍摄一张书法家正在写字的照片', 
-        '请拍摄一张舞蹈演员正在跳舞的照片', 
-        '请拍摄一张攀岩者正在攀岩的照片', 
-        '请拍摄一张篮球运动员正在投篮的照片'
+        '请拍摄一张正在弹钢琴的手部特写', 
+        '请拍摄一张正在跑步的腿部动态照片', 
+        '请拍摄一张正在大笑的人物表情抓拍', 
+        '请拍摄一张老人布满皱纹的手部特写', 
+        '请拍摄一张婴儿熟睡的照片', 
+        '请拍摄一张正在做瑜伽的高难度动作照片', 
+        '请拍摄一张正在画画的人专注的神态', 
+        '请拍摄一张正在跳舞的动态模糊照片', 
+        '请拍摄一张工地上工人挥汗如雨的照片', 
+        '请拍摄一张医生正在工作的照片'
     ]
   },
   [CollectionCategory.STREET]: {
-    [Difficulty.EASY]: ['城市街道', '农村田野', '乡镇集市', '学校操场', '社区公园', '公交车站', '天桥景观', '火车站广场景观', '购物中心门口', '安静的居民区街道'],
-    [Difficulty.MEDIUM]: ['南京市图书馆正面', '西安农村的麦田', '繁华的上海南京路', '古老的江南水乡小巷', '标志性的城市钟楼', '跨海大桥的宏伟远景', '热闹的夜市摊位', '清晨无人的步行街', '充满涂鸦的艺术街区', '老旧斑驳的弄堂口'],
+    [Difficulty.EASY]: ['城市街道', '农村田野', '乡镇集市', '学校大门', '公交车站', '天桥', '十字路口', '公园长椅', '便利店门口', '路灯'],
+    [Difficulty.MEDIUM]: ['南京市图书馆正面', '西安农村的麦田', '北京胡同的入口', '上海陆家嘴的远景', '广州塔的夜景', '成都的茶馆门口', '杭州西湖的断桥', '重庆的轻轨穿楼', '武汉的长江大桥', '哈尔滨的冰雪大世界'],
     [Difficulty.HARD]: [
-        '请拍摄一张人们在图书馆内阅读的照片', 
-        '请拍摄一张田野里收割机正在工作的照片', 
-        '请拍摄一张城市夜晚霓虹闪烁的街道照片', 
-        '请拍摄一张雨后古镇的倒影照片', 
-        '请拍摄一张环卫工人正在清扫街道的照片', 
-        '请拍摄一张雨中十字路口的照片', 
-        '请拍摄一张夜市收摊时的照片', 
-        '请拍摄一张灯火辉煌的CBD建筑群照片', 
-        '请拍摄一张被雪覆盖的街道照片', 
-        '请拍摄一张夕阳映照在建筑上的照片'
+        '请在30分钟内，采集一张夜晚灯火通明的城市CBD照片', 
+        '请在30分钟内，采集一张清晨无人的街道照片', 
+        '请在30分钟内，采集一张雨中熙熙攘攘的十字路口照片', 
+        '请在30分钟内，采集一张夕阳下的农村田野照片', 
+        '请在30分钟内，采集一张正在施工的建筑工地照片', 
+        '请在30分钟内，采集一张繁忙的早市摊位照片', 
+        '请在30分钟内，采集一张老旧小区的斑驳墙面照片', 
+        '请在30分钟内，采集一张火车站广场人流穿梭的照片', 
+        '请在30分钟内，采集一张地铁站内匆忙人群的照片', 
+        '请在30分钟内，采集一张雪后初晴的街道照片'
     ]
   },
   [CollectionCategory.LIFE]: {
-    [Difficulty.EASY]: ['家庭作业图片', '做饭的原材料', '待洗的碗筷', '扫把和簸箕', '一杯热咖啡', '摊开的书本', '挂在架子上的钥匙', '整齐的床铺', '整理好的书包', '阳台上的晾衣架'],
-    [Difficulty.MEDIUM]: ['认真书写的家庭作业', '正在锅里翻炒的菜肴', '水槽里打满泡沫的碗筷', '整洁干净的房间', '充满蒸汽的浴室一角', '正在充电的电子设备', '正在浇灌阳台花卉', '摆放整齐的书架', '热气腾腾的晚餐桌面', '正在使用的健身器材'],
+    [Difficulty.EASY]: ['作业本', '做饭的锅铲', '洗碗的海绵', '牙刷', '毛巾', '水杯', '拖鞋', '遥控器', '枕头', '充电器'],
+    [Difficulty.MEDIUM]: ['写满字的家庭作业', '正在翻炒的菜肴', '堆满泡沫的碗筷', '刚洗好的水果', '折叠整齐的衣服', '摆放整齐的书桌', '热气腾腾的咖啡', '正在播放画面的电视', '打开的笔记本电脑', '挂满衣服的衣架'],
     [Difficulty.HARD]: [
         '请在30分钟内，拍摄一张你正在洗碗的照片', 
-        '请在30分钟内，拍摄一张你正在打扫房间的照片', 
         '请在30分钟内，拍摄一张你正在做饭的照片', 
-        '请在30分钟内，拍摄一张你正在整理书桌的照片', 
-        '请在30分钟内，拍摄一张你正在熨烫衣服的照片', 
-        '请在30分钟内，拍摄一张你正在修理东西的照片', 
-        '请在30分钟内，拍摄一张你正在组装家具的照片', 
-        '请在30分钟内，拍摄一张你正在练习乐器的照片', 
-        '请在30分钟内，拍摄一张你正在给宠物洗澡的照片', 
-        '请在30分钟内，拍摄一张你正在整理衣柜的照片'
+        '请在30分钟内，拍摄一张你正在打扫房间的照片', 
+        '请在30分钟内，拍摄一张你正在辅导孩子写作业的照片', 
+        '请在30分钟内，拍摄一张你正在修理家电的照片', 
+        '请在30分钟内，拍摄一张你正在整理衣柜的照片', 
+        '请在30分钟内，拍摄一张你正在给宠物喂食的照片', 
+        '请在30分钟内，拍摄一张你正在浇花的照片', 
+        '请在30分钟内，拍摄一张你正在熨衣服的照片', 
+        '请在30分钟内，拍摄一张你正在组装家具的照片'
+    ]
+  },
+  [CollectionCategory.AUDIO]: {
+    [Difficulty.EASY]: [
+      '请朗读：人工智能正在改变我们的生活方式。',
+      '请朗读：Web3 是下一代互联网的形态。',
+      '请朗读：今天的天气非常适合户外运动。',
+      '请朗读：去中心化网络保护了用户的数据主权。',
+      '请朗读：区块链技术具有不可篡改的特性。',
+      '请朗读：机器学习需要大量的高质量数据。',
+      '请朗读：保护环境，从垃圾分类做起。',
+      '请朗读：保持好奇心是学习的源动力。',
+      '请朗读：数字货币市场充满了机遇与挑战。',
+      '请朗读：坚持锻炼身体，保持健康作息。'
+    ],
+    [Difficulty.MEDIUM]: [
+      '请在 3 秒内开始朗读屏幕出现的数字：9527',
+      '请在 3 秒内开始朗读：快速的棕色狐狸跳过了懒惰的狗。',
+      '请在 3 秒内开始朗读：吃葡萄不吐葡萄皮。',
+      '请在 3 秒内开始大声说出你的名字。',
+      '请在 3 秒内开始朗读：红鲤鱼与绿鲤鱼与驴。',
+      '请在 3 秒内开始朗读今天的日期。',
+      '请在 3 秒内开始模仿猫叫一声。',
+      '请在 3 秒内开始大笑三声。',
+      '请在 3 秒内开始朗读：八百标兵奔北坡。',
+      '请在 3 秒内开始说出一句你喜欢的歌词。'
+    ],
+    [Difficulty.HARD]: [
+      '请录制 10 秒你所在环境的声音（如咖啡厅/街道）。',
+      '请录制 10 秒窗外的风声或雨声。',
+      '请录制 10 秒键盘敲击的声音。',
+      '请录制 10 秒家中电视或广播的背景音。',
+      '请录制 10 秒公交车或地铁运行的声音。',
+      '请录制 10 秒厨房做饭的嘈杂声。',
+      '请录制 10 秒公园里的鸟叫声。',
+      '请录制 10 秒商场里的人声鼎沸。',
+      '请录制 10 秒正在行驶的汽车内部声音。',
+      '请录制 10 秒安静图书馆内的翻书声。'
     ]
   }
 };
@@ -135,6 +173,13 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
   const [usedTasks, setUsedTasks] = useState<Set<string>>(new Set());
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // Audio specific states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getPoints = () => {
     if (difficulty === Difficulty.EASY) return 1;
@@ -146,6 +191,9 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     setIsLoading(true);
     setFeedback(null);
     setSelectedIds([]);
+    setAudioBlob(null);
+    setRecordingDuration(0);
+    setIsRecording(false);
     
     if (type === TaskType.QUICK_JUDGMENT) {
       let target;
@@ -190,10 +238,15 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
       const prompt = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : pool[Math.floor(Math.random() * pool.length)];
       setUsedTasks(prev => new Set(prev).add(prompt));
 
-      if (difficulty === Difficulty.HARD) {
+      if (difficulty === Difficulty.HARD && category !== CollectionCategory.AUDIO) {
         setTimeLeft(1800); 
       }
-      setCurrentTask({ title: `任务：${prompt}`, prompt });
+      
+      let title = `任务：${prompt}`;
+      if (category === CollectionCategory.AUDIO) {
+        title = `${difficulty}音频采集`;
+      }
+      setCurrentTask({ title, prompt });
     }
     setTimeout(() => setIsLoading(false), 400);
   }, [type, difficulty, category, usedTasks]);
@@ -212,6 +265,76 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
       }
     }
   }, [timeLeft, feedback, difficulty, type, currentTask]);
+
+  // Audio Recording Logic
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      const chunks: BlobPart[] = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      
+      timerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      alert("无法访问麦克风，请检查权限设置。");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  const handleAudioSubmit = () => {
+    if (!audioBlob) return;
+    
+    // Logic check based on difficulty
+    let isValid = true;
+    if (difficulty === Difficulty.EASY) {
+      // Must be > 5s
+      if (recordingDuration < 5) {
+        alert("录音时长不足 5 秒，请重试。");
+        isValid = false;
+      }
+    } else if (difficulty === Difficulty.HARD) {
+      // Must be around 10s (let's say > 8s)
+      if (recordingDuration < 8) {
+        alert("环境音采集时长不足 8 秒，请重试。");
+        isValid = false;
+      }
+    }
+
+    if (isValid) {
+      submitResult(true);
+    } else {
+      setAudioBlob(null);
+      setRecordingDuration(0);
+    }
+  };
+
 
   const handleQuickHardSubmit = () => {
     if (!currentTask || !currentTask.images) return;
@@ -358,38 +481,84 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
             )}
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center justify-center bg-gray-50">
-              <span className="text-4xl mb-2">{difficulty === Difficulty.HARD ? '📸' : '🖼️'}</span>
-              <p className="text-[10px] text-gray-400 text-center font-medium leading-relaxed">
-                {difficulty === Difficulty.HARD ? '高级采集：请根据任务提示，在规定时间内拍摄或上传一张真实的行为照片。' : (difficulty === Difficulty.MEDIUM ? '中级采集：支持上传，将严审时间与位置信息' : '初级采集：支持从相册选取或拍照')}
-              </p>
-            </div>
-            <input 
-              type="file" 
-              className="hidden" 
-              id="upload" 
-              accept="image/*" 
-              onChange={handleFileUpload}
-              disabled={isUploading}
-            />
-            <label htmlFor="upload" className={`block w-full py-4 rounded-xl text-white font-black text-center shadow-lg active:scale-[0.98] transition-all ${isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 active:bg-green-700 cursor-pointer'}`}>
-              {isUploading ? (
-                  <div className="flex items-center justify-center">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      <span>正在校验图片...</span>
+          category === CollectionCategory.AUDIO ? (
+            // AUDIO TASK UI
+            <div className="space-y-6 text-center">
+              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                <p className="text-sm font-bold text-gray-800 leading-relaxed">{currentTask.prompt}</p>
+                {difficulty === Difficulty.EASY && <p className="text-[10px] text-blue-500 mt-2">* 需朗读 5 秒以上</p>}
+                {difficulty === Difficulty.MEDIUM && <p className="text-[10px] text-orange-500 mt-2">* 请快速开始朗读</p>}
+                {difficulty === Difficulty.HARD && <p className="text-[10px] text-purple-500 mt-2">* 需采集 10 秒环境音</p>}
+              </div>
+
+              <div className="flex flex-col items-center justify-center space-y-4">
+                {audioBlob ? (
+                  <div className="w-full space-y-3 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="bg-green-50 text-green-700 py-3 rounded-xl border border-green-200 flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <span className="font-bold text-sm">录制完成 ({recordingDuration}s)</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                       <button onClick={() => { setAudioBlob(null); setRecordingDuration(0); }} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-600">重录</button>
+                       <button onClick={handleAudioSubmit} className="py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg">提交录音</button>
+                    </div>
                   </div>
-              ) : (
-                  '点击上传/拍摄照片'
+                ) : (
+                  <>
+                    <div className="relative">
+                      {isRecording && <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-red-500 font-mono text-2xl font-black">{formatTime(recordingDuration)}</span>}
+                      <button 
+                        onClick={isRecording ? stopRecording : startRecording}
+                        className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-all ${isRecording ? 'bg-red-100 border-4 border-red-500' : 'bg-red-500 hover:bg-red-600 border-4 border-red-100'}`}
+                      >
+                         {isRecording ? (
+                           <div className="w-8 h-8 bg-red-500 rounded-lg animate-pulse"></div>
+                         ) : (
+                           <div className="w-8 h-8 bg-white rounded-full"></div>
+                         )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{isRecording ? '正在录音...' : '点击开始录音'}</p>
+                  </>
+                )}
+              </div>
+              <button onClick={() => submitResult('skipped')} className="w-full text-gray-400 text-[10px] font-bold uppercase py-2 tracking-widest">跳过此项任务</button>
+            </div>
+          ) : (
+            // IMAGE COLLECTION UI
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center justify-center bg-gray-50">
+                <span className="text-4xl mb-2">{difficulty === Difficulty.HARD ? '📸' : '🖼️'}</span>
+                <p className="text-[10px] text-gray-400 text-center font-medium leading-relaxed">
+                  {difficulty === Difficulty.HARD ? '高级采集：请根据任务提示，在规定时间内拍摄或上传一张真实的行为照片。' : (difficulty === Difficulty.MEDIUM ? '中级采集：支持上传，将严审时间与位置信息' : '初级采集：支持从相册选取或拍照')}
+                </p>
+              </div>
+              <input 
+                type="file" 
+                className="hidden" 
+                id="upload" 
+                accept="image/*" 
+                onChange={handleFileUpload}
+                disabled={isUploading}
+              />
+              <label htmlFor="upload" className={`block w-full py-4 rounded-xl text-white font-black text-center shadow-lg active:scale-[0.98] transition-all ${isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 active:bg-green-700 cursor-pointer'}`}>
+                {isUploading ? (
+                    <div className="flex items-center justify-center">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        <span>正在校验图片...</span>
+                    </div>
+                ) : (
+                    '点击上传/拍摄照片'
+                )}
+              </label>
+              {showDuplicateWarning && (
+                  <div className="text-center text-red-500 bg-red-50 border border-red-200 p-2 rounded-lg text-xs font-bold animate-shake">
+                      您已提交过这张图片，请选择一张新的图片。
+                  </div>
               )}
-            </label>
-            {showDuplicateWarning && (
-                <div className="text-center text-red-500 bg-red-50 border border-red-200 p-2 rounded-lg text-xs font-bold animate-shake">
-                    您已提交过这张图片，请选择一张新的图片。
-                </div>
-            )}
-            <button onClick={() => submitResult('skipped')} className="w-full text-gray-400 text-[10px] font-bold uppercase py-2 tracking-widest">跳过此项任务</button>
-          </div>
+              <button onClick={() => submitResult('skipped')} className="w-full text-gray-400 text-[10px] font-bold uppercase py-2 tracking-widest">跳过此项任务</button>
+            </div>
+          )
         )}
       </div>
 

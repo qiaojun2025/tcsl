@@ -3,6 +3,7 @@
   "description": "A decentralized task platform featuring AI-powered image verification, quick judgment tasks, and data collection missions.",
   "requestFramePermissions": [
     "camera",
-    "geolocation"
+    "geolocation",
+    "microphone"
   ]
 }
