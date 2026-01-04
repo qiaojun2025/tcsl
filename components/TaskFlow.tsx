@@ -133,26 +133,64 @@ const COLLECTION_POOLS: Record<CollectionCategory, Record<Difficulty, string[]>>
       '请录制 10 秒正在行驶的汽车内部声音。',
       '请录制 10 秒安静图书馆内的翻书声。'
     ]
+  },
+  [CollectionCategory.VIDEO]: {
+    [Difficulty.EASY]: [
+      '请拍摄一段视频：缓慢旋转展示一瓶矿泉水的正反面。',
+      '请拍摄一段视频：缓慢旋转展示一个水杯的正反面。',
+      '请拍摄一段视频：缓慢旋转展示一本书的封面和封底。',
+      '请拍摄一段视频：缓慢旋转展示一部手机的正反面（对着镜子）。',
+      '请拍摄一段视频：缓慢旋转展示一个遥控器的各个角度。',
+      '请拍摄一段视频：缓慢旋转展示一个鼠标的各个角度。',
+      '请拍摄一段视频：缓慢旋转展示一个苹果的各个角度。',
+      '请拍摄一段视频：缓慢旋转展示一个订书机的各个角度。',
+      '请拍摄一段视频：缓慢旋转展示一个闹钟的正反面。',
+      '请拍摄一段视频：缓慢旋转展示一个玩具的各个角度。'
+    ],
+    [Difficulty.MEDIUM]: [
+      '请拍摄一段 8–15 秒的视频，展示一家便利店的收银台区域。',
+      '请拍摄一段 8–15 秒的视频，展示一个公交站台的候车区域。',
+      '请拍摄一段 8–15 秒的视频，展示一个公园的长椅和周围环境。',
+      '请拍摄一段 8–15 秒的视频，展示一个咖啡厅的吧台制作区域。',
+      '请拍摄一段 8–15 秒的视频，展示一个图书馆的书架区域。',
+      '请拍摄一段 8–15 秒的视频，展示一个办公室的工位区域。',
+      '请拍摄一段 8–15 秒的视频，展示一个健身房的器械区域。',
+      '请拍摄一段 8–15 秒的视频，展示一个停车场的入口区域。',
+      '请拍摄一段 8–15 秒的视频，展示一个学校的操场区域。',
+      '请拍摄一段 8–15 秒的视频，展示一个商场的扶梯区域。'
+    ],
+    [Difficulty.HARD]: [
+      '请录制一段视频，展示手机扫码并进入支付页面的过程。',
+      '请录制一段视频，展示在自动售货机上购买饮料的全过程。',
+      '请录制一段视频，展示使用共享单车扫码开锁的全过程。',
+      '请录制一段视频，展示在ATM机上查询余额的操作过程（注意遮挡敏感信息）。',
+      '请录制一段视频，展示使用电梯上下楼的按键操作过程。',
+      '请录制一段视频，展示在自助点餐机上下单的全过程。',
+      '请录制一段视频，展示使用复印机复印文件的操作过程。',
+      '请录制一段视频，展示使用微波炉加热食物的操作过程。',
+      '请录制一段视频，展示使用洗衣机设置程序的按键操作过程。',
+      '请录制一段视频，展示在电脑上登录邮箱的操作过程（注意遮挡敏感信息）。'
+    ]
   }
 };
 
-const getSubmittedImageHashes = (): Set<string> => {
+const getSubmittedFileHashes = (): Set<string> => {
     try {
-        const hashes = localStorage.getItem('submitted_image_hashes');
+        const hashes = localStorage.getItem('submitted_file_hashes');
         return hashes ? new Set(JSON.parse(hashes)) : new Set();
     } catch (e) {
-        console.error("Failed to parse image hashes from localStorage", e);
+        console.error("Failed to parse file hashes from localStorage", e);
         return new Set();
     }
 };
 
-const addSubmittedImageHash = (hash: string) => {
-    const hashes = getSubmittedImageHashes();
+const addSubmittedFileHash = (hash: string) => {
+    const hashes = getSubmittedFileHashes();
     hashes.add(hash);
-    localStorage.setItem('submitted_image_hashes', JSON.stringify(Array.from(hashes)));
+    localStorage.setItem('submitted_file_hashes', JSON.stringify(Array.from(hashes)));
 };
 
-const computeFileHash = async (file: File): Promise<string> => {
+const computeFileHash = async (file: File | Blob): Promise<string> => {
     const buffer = await file.arrayBuffer();
     const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
@@ -174,14 +212,20 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
-  // Audio specific states
+  // Audio/Video specific states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [mediaBlob, setMediaBlob] = useState<Blob | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
 
   const getPoints = () => {
+    if (category === CollectionCategory.VIDEO) {
+        if (difficulty === Difficulty.EASY) return 4;
+        if (difficulty === Difficulty.MEDIUM) return 8;
+        return 11;
+    }
     if (difficulty === Difficulty.EASY) return 1;
     if (difficulty === Difficulty.MEDIUM) return 3;
     return 6;
@@ -191,7 +235,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     setIsLoading(true);
     setFeedback(null);
     setSelectedIds([]);
-    setAudioBlob(null);
+    setMediaBlob(null);
     setRecordingDuration(0);
     setIsRecording(false);
     
@@ -238,13 +282,15 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
       const prompt = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : pool[Math.floor(Math.random() * pool.length)];
       setUsedTasks(prev => new Set(prev).add(prompt));
 
-      if (difficulty === Difficulty.HARD && category !== CollectionCategory.AUDIO) {
+      if (difficulty === Difficulty.HARD && category !== CollectionCategory.AUDIO && category !== CollectionCategory.VIDEO) {
         setTimeLeft(1800); 
       }
       
       let title = `任务：${prompt}`;
       if (category === CollectionCategory.AUDIO) {
         title = `${difficulty}音频采集`;
+      } else if (category === CollectionCategory.VIDEO) {
+        title = `${difficulty}视频采集`;
       }
       setCurrentTask({ title, prompt });
     }
@@ -266,10 +312,18 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     }
   }, [timeLeft, feedback, difficulty, type, currentTask]);
 
-  // Audio Recording Logic
-  const startRecording = async () => {
+  // Audio/Video Recording Logic
+  const startRecording = async (isVideo: boolean) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const constraints = isVideo ? { audio: true, video: { facingMode: "user" } } : { audio: true };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      if (isVideo && videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream;
+        videoPreviewRef.current.muted = true; // Mute playback during recording to avoid feedback
+        videoPreviewRef.current.play();
+      }
+
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       const chunks: BlobPart[] = [];
@@ -279,9 +333,13 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        setAudioBlob(blob);
+        const mimeType = isVideo ? 'video/webm' : 'audio/webm';
+        const blob = new Blob(chunks, { type: mimeType });
+        setMediaBlob(blob);
         stream.getTracks().forEach(track => track.stop());
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.srcObject = null;
+        }
       };
 
       mediaRecorder.start();
@@ -292,8 +350,8 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
       }, 1000);
 
     } catch (err) {
-      console.error("Error accessing microphone:", err);
-      alert("无法访问麦克风，请检查权限设置。");
+      console.error("Error accessing media devices:", err);
+      alert(`无法访问${isVideo ? '摄像头/麦克风' : '麦克风'}，请检查权限设置。`);
     }
   };
 
@@ -308,29 +366,40 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     }
   };
 
-  const handleAudioSubmit = () => {
-    if (!audioBlob) return;
+  const handleMediaSubmit = (isVideo: boolean) => {
+    if (!mediaBlob) return;
     
-    // Logic check based on difficulty
+    // Logic check based on difficulty for Audio/Video
     let isValid = true;
-    if (difficulty === Difficulty.EASY) {
-      // Must be > 5s
-      if (recordingDuration < 5) {
-        alert("录音时长不足 5 秒，请重试。");
+    let minDuration = 5; 
+    
+    if (category === CollectionCategory.VIDEO) {
+        if (difficulty === Difficulty.MEDIUM) minDuration = 8;
+        if (difficulty === Difficulty.HARD) minDuration = 10;
+    } else if (category === CollectionCategory.AUDIO) {
+        if (difficulty === Difficulty.EASY) minDuration = 5;
+        if (difficulty === Difficulty.HARD) minDuration = 8;
+    }
+
+    if (recordingDuration < minDuration) {
+        alert(`${isVideo ? '视频' : '录音'}时长不足 ${minDuration} 秒，请重试。`);
         isValid = false;
-      }
-    } else if (difficulty === Difficulty.HARD) {
-      // Must be around 10s (let's say > 8s)
-      if (recordingDuration < 8) {
-        alert("环境音采集时长不足 8 秒，请重试。");
-        isValid = false;
-      }
     }
 
     if (isValid) {
-      submitResult(true);
+      // Add hash check for media blob
+      computeFileHash(mediaBlob).then(hash => {
+        const submittedHashes = getSubmittedFileHashes();
+        if (submittedHashes.has(hash)) {
+            setShowDuplicateWarning(true);
+            setTimeout(() => setShowDuplicateWarning(false), 3000);
+        } else {
+            addSubmittedFileHash(hash);
+            submitResult(true);
+        }
+      });
     } else {
-      setAudioBlob(null);
+      setMediaBlob(null);
       setRecordingDuration(0);
     }
   };
@@ -345,7 +414,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     submitResult(isCorrect);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, isMedia: boolean = false) => {
     if (!event.target.files || event.target.files.length === 0) {
         return;
     }
@@ -353,22 +422,51 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     setIsUploading(true);
 
     try {
+        // Duplicate Check
         const hash = await computeFileHash(file);
-        const submittedHashes = getSubmittedImageHashes();
+        const submittedHashes = getSubmittedFileHashes();
 
         if (submittedHashes.has(hash)) {
             setShowDuplicateWarning(true);
             setTimeout(() => setShowDuplicateWarning(false), 3000);
             event.target.value = '';
+            setIsUploading(false);
             return;
         }
 
-        addSubmittedImageHash(hash);
-        submitResult(true);
+        if (isMedia) {
+            // For Audio/Video upload, we need to check duration before submitting
+            const url = URL.createObjectURL(file);
+            const element = category === CollectionCategory.VIDEO ? document.createElement('video') : document.createElement('audio');
+            element.preload = 'metadata';
+            
+            element.onloadedmetadata = () => {
+                const duration = element.duration;
+                // Round to nearest int for display consistency, though float is fine
+                setRecordingDuration(Math.round(duration));
+                setMediaBlob(file);
+                
+                // We don't auto-submit media uploads, user must review and click submit to trigger duration validation logic in handleMediaSubmit
+                // But we still need to add hash later. For now, just setting blob is enough, 
+                // handleMediaSubmit will re-compute hash.
+                setIsUploading(false);
+            };
+
+            element.onerror = () => {
+                alert("无法读取文件信息，请重试。");
+                setIsUploading(false);
+            };
+
+            element.src = url;
+        } else {
+            // Image upload - auto submit
+            addSubmittedFileHash(hash);
+            submitResult(true);
+            setIsUploading(false);
+        }
 
     } catch (error) {
         console.error("Error processing file:", error);
-    } finally {
         setIsUploading(false);
     }
   };
@@ -481,48 +579,104 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
             )}
           </div>
         ) : (
-          category === CollectionCategory.AUDIO ? (
-            // AUDIO TASK UI
+          (category === CollectionCategory.AUDIO || category === CollectionCategory.VIDEO) ? (
+            // AUDIO & VIDEO TASK UI
             <div className="space-y-6 text-center">
               <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                 <p className="text-sm font-bold text-gray-800 leading-relaxed">{currentTask.prompt}</p>
-                {difficulty === Difficulty.EASY && <p className="text-[10px] text-blue-500 mt-2">* 需朗读 5 秒以上</p>}
-                {difficulty === Difficulty.MEDIUM && <p className="text-[10px] text-orange-500 mt-2">* 请快速开始朗读</p>}
-                {difficulty === Difficulty.HARD && <p className="text-[10px] text-purple-500 mt-2">* 需采集 10 秒环境音</p>}
+                {/* Hints */}
+                {category === CollectionCategory.AUDIO && (
+                    <>
+                        {difficulty === Difficulty.EASY && <p className="text-[10px] text-blue-500 mt-2">* 需朗读 5 秒以上</p>}
+                        {difficulty === Difficulty.MEDIUM && <p className="text-[10px] text-orange-500 mt-2">* 请快速开始朗读</p>}
+                        {difficulty === Difficulty.HARD && <p className="text-[10px] text-purple-500 mt-2">* 需采集 10 秒环境音</p>}
+                    </>
+                )}
+                {category === CollectionCategory.VIDEO && (
+                    <>
+                        {difficulty === Difficulty.EASY && <p className="text-[10px] text-blue-500 mt-2">* 需拍摄 5 秒以上</p>}
+                        {difficulty === Difficulty.MEDIUM && <p className="text-[10px] text-orange-500 mt-2">* 需拍摄 8-15 秒</p>}
+                        {difficulty === Difficulty.HARD && <p className="text-[10px] text-purple-500 mt-2">* 建议拍摄 10 秒以上</p>}
+                    </>
+                )}
               </div>
 
               <div className="flex flex-col items-center justify-center space-y-4">
-                {audioBlob ? (
+                {/* Video Preview Area */}
+                {category === CollectionCategory.VIDEO && !mediaBlob && (
+                   <div className="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg relative">
+                      <video ref={videoPreviewRef} className="w-full h-full object-cover" playsInline autoPlay muted />
+                      {!isRecording && <div className="absolute inset-0 flex items-center justify-center text-white/50 text-sm">等待录制或上传...</div>}
+                   </div>
+                )}
+
+                {/* Video Playback Area */}
+                {category === CollectionCategory.VIDEO && mediaBlob && (
+                   <div className="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg">
+                      <video src={URL.createObjectURL(mediaBlob)} className="w-full h-full object-contain" controls />
+                   </div>
+                )}
+
+
+                {mediaBlob ? (
                   <div className="w-full space-y-3 animate-in fade-in slide-in-from-bottom-4">
                     <div className="bg-green-50 text-green-700 py-3 rounded-xl border border-green-200 flex items-center justify-center">
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                      <span className="font-bold text-sm">录制完成 ({recordingDuration}s)</span>
+                      <span className="font-bold text-sm">准备提交 ({recordingDuration}s)</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                       <button onClick={() => { setAudioBlob(null); setRecordingDuration(0); }} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-600">重录</button>
-                       <button onClick={handleAudioSubmit} className="py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg">提交录音</button>
+                       <button onClick={() => { setMediaBlob(null); setRecordingDuration(0); }} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-600">重录/重传</button>
+                       <button onClick={() => handleMediaSubmit(category === CollectionCategory.VIDEO)} className="py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg">提交{category === CollectionCategory.VIDEO ? '视频' : '录音'}</button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="relative">
-                      {isRecording && <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-red-500 font-mono text-2xl font-black">{formatTime(recordingDuration)}</span>}
-                      <button 
-                        onClick={isRecording ? stopRecording : startRecording}
-                        className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-all ${isRecording ? 'bg-red-100 border-4 border-red-500' : 'bg-red-500 hover:bg-red-600 border-4 border-red-100'}`}
-                      >
-                         {isRecording ? (
-                           <div className="w-8 h-8 bg-red-500 rounded-lg animate-pulse"></div>
-                         ) : (
-                           <div className="w-8 h-8 bg-white rounded-full"></div>
-                         )}
-                      </button>
+                    <div className="relative mt-4 flex justify-center items-center space-x-6">
+                      <div className="flex flex-col items-center">
+                          {isRecording && <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-red-500 font-mono text-2xl font-black">{formatTime(recordingDuration)}</span>}
+                          <button 
+                            onClick={isRecording ? stopRecording : () => startRecording(category === CollectionCategory.VIDEO)}
+                            className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-all ${isRecording ? 'bg-red-100 border-4 border-red-500' : 'bg-red-500 hover:bg-red-600 border-4 border-red-100'}`}
+                          >
+                             {isRecording ? (
+                               <div className="w-8 h-8 bg-red-500 rounded-lg animate-pulse"></div>
+                             ) : (
+                               <svg className="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"/></svg>
+                             )}
+                          </button>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{isRecording ? '正在录制...' : '录制'}</p>
+                      </div>
+
+                      {category === CollectionCategory.VIDEO && (
+                      <div className="flex flex-col items-center">
+                           <input 
+                                type="file" 
+                                className="hidden" 
+                                id="media-upload" 
+                                accept="video/*"
+                                onChange={(e) => handleFileUpload(e, true)}
+                                disabled={isUploading || isRecording}
+                           />
+                           <label htmlFor="media-upload" className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-all border-4 cursor-pointer ${isUploading ? 'bg-gray-100 border-gray-300' : 'bg-blue-500 hover:bg-blue-600 border-blue-100'}`}>
+                                {isUploading ? (
+                                    <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                )}
+                           </label>
+                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">上传</p>
+                      </div>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{isRecording ? '正在录音...' : '点击开始录音'}</p>
                   </>
                 )}
               </div>
               <button onClick={() => submitResult('skipped')} className="w-full text-gray-400 text-[10px] font-bold uppercase py-2 tracking-widest">跳过此项任务</button>
+              {showDuplicateWarning && (
+                  <div className="text-center text-red-500 bg-red-50 border border-red-200 p-2 rounded-lg text-xs font-bold animate-shake mt-2">
+                      检测到重复提交的文件，请选择新的文件。
+                  </div>
+              )}
             </div>
           ) : (
             // IMAGE COLLECTION UI
@@ -538,7 +692,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
                 className="hidden" 
                 id="upload" 
                 accept="image/*" 
-                onChange={handleFileUpload}
+                onChange={(e) => handleFileUpload(e, false)}
                 disabled={isUploading}
               />
               <label htmlFor="upload" className={`block w-full py-4 rounded-xl text-white font-black text-center shadow-lg active:scale-[0.98] transition-all ${isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 active:bg-green-700 cursor-pointer'}`}>

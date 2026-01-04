@@ -6,7 +6,7 @@ import TaskFlow from './TaskFlow.tsx';
 interface Message {
   id: string;
   sender: 'agent' | 'user';
-  type: 'text' | 'task-type-select' | 'category-select' | 'difficulty-select' | 'account-stats-report' | 'daily-stats-report' | 'task-report';
+  type: 'text' | 'task-type-select' | 'category-select' | 'difficulty-select' | 'media-type-select' | 'account-stats-report' | 'daily-stats-report' | 'task-report';
   payload: any;
   timestamp: number;
 }
@@ -111,30 +111,69 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
     }]);
   };
 
+  // 1. Select Task Type
   const handleSelectTaskType = (type: TaskType) => {
     addMessage(`选择【${type}】`, 'user');
-    setTimeout(() => addMessage({ taskType: type }, 'agent', 'difficulty-select'), 400);
-  };
-
-  const handleSelectDifficulty = (type: TaskType, difficulty: Difficulty) => {
-    addMessage(`难度：${difficulty}`, 'user');
-    
     if (type === TaskType.COLLECTION) {
-      setTimeout(() => addMessage({ taskType: type, difficulty: difficulty }, 'agent', 'category-select'), 400);
+        setTimeout(() => addMessage({ taskType: type }, 'agent', 'media-type-select'), 400);
     } else {
-      setTimeout(() => {
-        addMessage("好的，正在为您匹配去中心化验证节点. 任务即将开始：", 'agent', 'text');
-        setActiveTask({ type, difficulty });
-      }, 400);
+        setTimeout(() => addMessage({ taskType: type }, 'agent', 'difficulty-select'), 400);
     }
   };
 
+  // 2. Select Media Type (Collection Only)
+  const handleSelectMediaType = (type: TaskType, mediaType: 'IMAGE' | 'AUDIO' | 'VIDEO') => {
+    let typeLabel = mediaType === 'IMAGE' ? '图片' : mediaType === 'AUDIO' ? '音频' : '视频';
+    addMessage(`文件类型：${typeLabel}`, 'user');
+    setTimeout(() => addMessage({ taskType: type, mediaType }, 'agent', 'difficulty-select'), 400);
+  };
+
+  // 3. Select Difficulty
+  const handleSelectDifficulty = (type: TaskType, difficulty: Difficulty, mediaType?: 'IMAGE' | 'AUDIO' | 'VIDEO') => {
+    addMessage(`难度：${difficulty}`, 'user');
+    
+    if (type === TaskType.QUICK_JUDGMENT) {
+        setTimeout(() => {
+          addMessage("好的，正在为您匹配去中心化验证节点. 任务即将开始：", 'agent', 'text');
+          setActiveTask({ type, difficulty });
+        }, 400);
+    } else {
+        // Collection Flow
+        if (mediaType === 'IMAGE') {
+           setTimeout(() => addMessage({ taskType: type, difficulty, mediaType }, 'agent', 'category-select'), 400);
+        } else {
+           const category = mediaType === 'AUDIO' ? CollectionCategory.AUDIO : CollectionCategory.VIDEO;
+           setTimeout(() => {
+              addMessage(`好的，已锁定【${difficulty}】级别的【${category}】采集任务。正在匹配验证节点...`, 'agent', 'text');
+              setActiveTask({ type, difficulty, category });
+           }, 400);
+        }
+    }
+  };
+
+  // 4. Select Category (Image Only)
   const handleSelectCategory = (type: TaskType, difficulty: Difficulty, category: CollectionCategory) => {
     addMessage(`分类：${category}`, 'user');
     setTimeout(() => {
       addMessage(`好的，已锁定【${difficulty}】级别的【${category}】采集任务。正在匹配验证节点...`, 'agent', 'text');
       setActiveTask({ type, difficulty, category });
     }, 400);
+  };
+
+  // Navigation Handlers (Back Buttons)
+  const handleBackToTaskType = () => {
+    addMessage("返回上一层", 'user');
+    setTimeout(() => addMessage("", 'agent', 'task-type-select'), 400);
+  };
+
+  const handleBackToMediaType = (type: TaskType) => {
+    addMessage("返回上一层", 'user');
+    setTimeout(() => addMessage({ taskType: type }, 'agent', 'media-type-select'), 400);
+  };
+  
+  const handleBackToDifficulty = (type: TaskType, mediaType: 'IMAGE' | 'AUDIO' | 'VIDEO') => {
+    addMessage("返回上一层", 'user');
+    setTimeout(() => addMessage({ taskType: type, mediaType }, 'agent', 'difficulty-select'), 400);
   };
 
   const handleTaskComplete = (score: number, type: TaskType, performance: { correctCount: number; totalCount: number; startTime: number; endTime: number }) => {
@@ -220,26 +259,47 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
             <button onClick={showAccountStats} className="w-full py-3.5 rounded-xl font-bold bg-gray-700 text-white shadow-md active:bg-gray-800 transition-colors">🏦 我的账户统计</button>
           </div>
         );
-      case 'category-select':
-        const { difficulty: catDiff, taskType: catType } = msg.payload;
+      case 'media-type-select':
+        const { taskType: mediaTaskType } = msg.payload;
         return (
-          <div className="space-y-2 mt-1">
-            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择任务分类 (当前难度: {catDiff})</p>
-            <div className="grid grid-cols-2 gap-2">
-              {Object.values(CollectionCategory).map(c => (
-                <button key={c} onClick={() => handleSelectCategory(catType, catDiff, c)} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-700 bg-white active:bg-gray-50 text-sm">{c}</button>
-              ))}
-            </div>
+          <div className="space-y-2.5 mt-1">
+             <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择采集文件类型</p>
+             <button onClick={() => handleSelectMediaType(mediaTaskType, 'IMAGE')} className="w-full py-3 rounded-xl font-bold bg-white border border-green-200 text-green-700 shadow-sm active:bg-green-50">🖼️ 图片采集</button>
+             <button onClick={() => handleSelectMediaType(mediaTaskType, 'AUDIO')} className="w-full py-3 rounded-xl font-bold bg-white border border-purple-200 text-purple-700 shadow-sm active:bg-purple-50">🎙️ 音频采集</button>
+             <button onClick={() => handleSelectMediaType(mediaTaskType, 'VIDEO')} className="w-full py-3 rounded-xl font-bold bg-white border border-red-200 text-red-700 shadow-sm active:bg-red-50">📹 视频采集</button>
+             <button onClick={handleBackToTaskType} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2">↩️ 返回上一层</button>
           </div>
         );
       case 'difficulty-select':
-        const { taskType: diffType } = msg.payload;
+        const { taskType: diffType, mediaType: diffMediaType } = msg.payload;
         return (
           <div className="space-y-2 mt-1">
             <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择难度等级</p>
             {[Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD].map(d => (
-              <button key={d} onClick={() => handleSelectDifficulty(diffType, d)} className="w-full py-3 rounded-xl font-bold border border-blue-200 text-blue-600 bg-white active:bg-blue-50 transition-colors">{d}</button>
+              <button key={d} onClick={() => handleSelectDifficulty(diffType, d, diffMediaType)} className="w-full py-3 rounded-xl font-bold border border-blue-200 text-blue-600 bg-white active:bg-blue-50 transition-colors">{d}</button>
             ))}
+            <button onClick={() => {
+                if (diffType === TaskType.COLLECTION) {
+                    handleBackToMediaType(diffType);
+                } else {
+                    handleBackToTaskType();
+                }
+            }} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2">↩️ 返回上一层</button>
+          </div>
+        );
+      case 'category-select':
+        const { difficulty: catDiff, taskType: catType, mediaType: catMediaType } = msg.payload;
+        // Filter out AUDIO and VIDEO from category selection as they are handled in media type select
+        const categories = Object.values(CollectionCategory).filter(c => c !== CollectionCategory.AUDIO && c !== CollectionCategory.VIDEO);
+        return (
+          <div className="space-y-2 mt-1">
+            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择任务分类 (当前难度: {catDiff})</p>
+            <div className="grid grid-cols-2 gap-2">
+              {categories.map(c => (
+                <button key={c} onClick={() => handleSelectCategory(catType, catDiff, c)} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-700 bg-white active:bg-gray-50 text-sm">{c}</button>
+              ))}
+            </div>
+            <button onClick={() => handleBackToDifficulty(catType, catMediaType)} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2">↩️ 返回上一层</button>
           </div>
         );
       case 'task-report':
@@ -255,6 +315,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
             </div>
             <div className="space-y-2 border-t border-b border-gray-100 py-3 mb-3">
               <div className="flex justify-between text-sm"><span className="text-gray-400">用户名</span><span className="font-bold">{r.username}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-400">用户ID</span><span className="font-mono text-xs">{r.userId}</span></div>
               <div className="flex justify-between text-sm"><span className="text-gray-400">任务类型</span><span className="font-bold">{r.type} ({r.difficulty})</span></div>
               {r.category && <div className="flex justify-between text-sm"><span className="text-gray-400">任务分类</span><span className="font-bold">{r.category}</span></div>}
               <div className="flex justify-between text-sm"><span className="text-gray-400">开始时间</span><span className="font-mono text-xs">{new Date(r.startTime).toLocaleString('zh-CN')}</span></div>

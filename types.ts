@@ -16,7 +16,8 @@ export enum CollectionCategory {
   PERSON = '人物类',
   STREET = '街景类',
   LIFE = '生活类',
-  AUDIO = '音频类'
+  AUDIO = '音频类',
+  VIDEO = '视频类'
 }
 
 export interface TaskCompletionRecord {
