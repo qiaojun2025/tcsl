@@ -663,13 +663,23 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
 
   // INTRO SCREEN
   if (showIntro) {
+    const taskList = category && difficulty ? COLLECTION_POOLS[category][difficulty] : [];
+    
+    // Determine specific requirement text based on category
+    let requirementsText = "请拍摄清晰、光线充足的照片。主体需位于画面中心，避免模糊或遮挡。";
+    if (category === CollectionCategory.VIDEO) {
+        requirementsText = "在人行道上或绕过障碍物正常行走的同时，使用应用内相机录制视频。将相机保持在胸部高度，避免直接拍摄他人的面部。";
+    } else if (category === CollectionCategory.AUDIO) {
+        requirementsText = "请在安静的环境下录制音频，保持语速适中，吐字清晰。";
+    }
+
     return (
-      <div className="bg-white rounded-2xl p-5 shadow-lg w-full relative overflow-hidden animate-in fade-in">
-         {/* 1. Title Area (Specific for Intro) */}
+      <div className="bg-white rounded-2xl p-5 shadow-lg w-full relative overflow-hidden animate-in fade-in max-h-[85vh] overflow-y-auto">
+         {/* 1. Title Area */}
          <div className="mb-6">
              <div className="flex justify-between items-center mb-4">
                   <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold">
-                    任务主题介绍
+                    {category || currentTask.theme}
                   </span>
                    <button onClick={onCancel} className="text-gray-300 hover:text-red-400 p-1">
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -678,22 +688,44 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
 
              <div className="bg-[#eff6ff] rounded-2xl p-4">
                  <div className="flex items-center space-x-2 mb-2">
-                     <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-md">
-                         {currentTask.theme}
-                     </span>
                      <span className="text-xs font-black text-blue-600 tracking-tight">AI TRAINING DATA</span>
                  </div>
                  <div className="bg-white rounded-lg p-3 mt-3 flex items-center shadow-sm">
                      <svg className="w-4 h-4 text-indigo-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                      <span className="text-xs font-bold text-indigo-600">
-                        Contributing to this boosts your payout rate.
+                        参与此项任务可以提高你的报酬结算比例。
                      </span>
                  </div>
               </div>
          </div>
 
-         {/* 2 & 3. Description & Requirements Areas */}
-         {renderDescriptionAndReqs(true)}
+         {/* 2. Task Area (List of 10 tasks) */}
+         <div className="mb-6">
+            <label className="text-gray-400 text-xs font-bold mb-2 flex justify-between items-center">
+                <span>包含10道采集任务</span>
+                <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-[10px]">PREVIEW</span>
+            </label>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <div className="max-h-32 overflow-y-auto pr-2 space-y-2">
+                    {taskList.map((task, idx) => (
+                        <div key={idx} className="flex items-start text-xs text-gray-600">
+                            <span className="font-mono text-gray-400 mr-2">{(idx + 1).toString().padStart(2, '0')}</span>
+                            <span>{task}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+         </div>
+         
+         {/* 3. Requirements Area */}
+         <div className="mb-6">
+            <label className="text-gray-400 text-xs font-bold mb-2 block">
+                任务要求
+            </label>
+            <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 font-medium leading-relaxed border border-gray-100">
+                {requirementsText}
+            </div>
+         </div>
          
          {/* 4. Button Area */}
          <div className="space-y-3 mt-4">
@@ -704,16 +736,16 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
                 }}
                 className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center text-sm tracking-wide"
             >
-                继续 (Continue)
+                开始
             </button>
             <button 
                 onClick={onCancel}
                 className="w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-500 font-bold active:bg-gray-50 transition-colors text-sm"
             >
-                返回 (Back)
+                返回
             </button>
             <p className="text-[10px] text-gray-400 text-center leading-tight px-4 pt-2">
-                Continue to complete the collection task.
+                继续完成采集任务。
             </p>
          </div>
       </div>
