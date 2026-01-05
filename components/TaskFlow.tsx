@@ -688,7 +688,6 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
                      <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wide">{currentTask.theme || category}</span>
                      <span className="text-[10px] text-blue-600 font-bold tracking-tight">AI TRAINING DATA</span>
                   </div>
-                  <h2 className="text-xl font-black text-gray-900 leading-tight mb-2">{currentTask.title}</h2>
                   <div className="flex items-center text-indigo-600 bg-white/60 backdrop-blur rounded-lg px-3 py-2 text-xs font-bold shadow-sm">
                       <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                       完成此任务可提升您的贡献值获取效率。
