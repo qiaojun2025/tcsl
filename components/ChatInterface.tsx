@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Difficulty, TaskType, UserStats, CollectionCategory, TaskCompletionRecord } from '../types.ts';
 import TaskFlow from './TaskFlow.tsx';
@@ -80,6 +79,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeTask, setActiveTask] = useState<{type: TaskType, category?: CollectionCategory, difficulty: Difficulty} | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const isTaskActive = !!activeTask;
 
   useEffect(() => {
     setMessages([{
@@ -247,16 +247,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
 
-  const renderMessageContent = (msg: Message) => {
+  const renderMessageContent = (msg: Message, isLast: boolean) => {
+    // Disable buttons if a task is running OR if this is not the last message (history)
+    const isDisabled = isTaskActive || !isLast;
+
     switch (msg.type) {
       case 'text': return <p className="leading-relaxed">{msg.payload}</p>;
       case 'task-type-select':
         return (
           <div className="space-y-2.5 mt-1">
-            <button onClick={() => handleSelectTaskType(TaskType.QUICK_JUDGMENT)} className="w-full py-3.5 rounded-xl font-bold bg-blue-600 text-white shadow-md active:bg-blue-700 transition-colors">🎯 快判任务</button>
-            <button onClick={() => handleSelectTaskType(TaskType.COLLECTION)} className="w-full py-3.5 rounded-xl font-bold bg-green-600 text-white shadow-md active:bg-green-700 transition-colors">📸 采集任务</button>
-            <button onClick={showDailyReport} className="w-full py-3.5 rounded-xl font-bold bg-indigo-500 text-white shadow-md active:bg-indigo-600 transition-colors">📈 我的日报统计</button>
-            <button onClick={showAccountStats} className="w-full py-3.5 rounded-xl font-bold bg-gray-700 text-white shadow-md active:bg-gray-800 transition-colors">🏦 我的账户统计</button>
+            <button disabled={isDisabled} onClick={() => handleSelectTaskType(TaskType.QUICK_JUDGMENT)} className="w-full py-3.5 rounded-xl font-bold bg-blue-600 text-white shadow-md active:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">🎯 快判任务</button>
+            <button disabled={isDisabled} onClick={() => handleSelectTaskType(TaskType.COLLECTION)} className="w-full py-3.5 rounded-xl font-bold bg-green-600 text-white shadow-md active:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">📸 采集任务</button>
+            <button disabled={isDisabled} onClick={showDailyReport} className="w-full py-3.5 rounded-xl font-bold bg-indigo-500 text-white shadow-md active:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">📈 我的日报统计</button>
+            <button disabled={isDisabled} onClick={showAccountStats} className="w-full py-3.5 rounded-xl font-bold bg-gray-700 text-white shadow-md active:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">🏦 我的账户统计</button>
           </div>
         );
       case 'media-type-select':
@@ -264,10 +267,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         return (
           <div className="space-y-2.5 mt-1">
              <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择采集文件类型</p>
-             <button onClick={() => handleSelectMediaType(mediaTaskType, 'IMAGE')} className="w-full py-3 rounded-xl font-bold bg-white border border-green-200 text-green-700 shadow-sm active:bg-green-50">🖼️ 图片采集</button>
-             <button onClick={() => handleSelectMediaType(mediaTaskType, 'AUDIO')} className="w-full py-3 rounded-xl font-bold bg-white border border-purple-200 text-purple-700 shadow-sm active:bg-purple-50">🎙️ 音频采集</button>
-             <button onClick={() => handleSelectMediaType(mediaTaskType, 'VIDEO')} className="w-full py-3 rounded-xl font-bold bg-white border border-red-200 text-red-700 shadow-sm active:bg-red-50">📹 视频采集</button>
-             <button onClick={handleBackToTaskType} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2">↩️ 返回上一层</button>
+             <button disabled={isDisabled} onClick={() => handleSelectMediaType(mediaTaskType, 'IMAGE')} className="w-full py-3 rounded-xl font-bold bg-white border border-green-200 text-green-700 shadow-sm active:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed">🖼️ 图片采集</button>
+             <button disabled={isDisabled} onClick={() => handleSelectMediaType(mediaTaskType, 'AUDIO')} className="w-full py-3 rounded-xl font-bold bg-white border border-purple-200 text-purple-700 shadow-sm active:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed">🎙️ 音频采集</button>
+             <button disabled={isDisabled} onClick={() => handleSelectMediaType(mediaTaskType, 'VIDEO')} className="w-full py-3 rounded-xl font-bold bg-white border border-red-200 text-red-700 shadow-sm active:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed">📹 视频采集</button>
+             <button disabled={isDisabled} onClick={handleBackToTaskType} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">↩️ 返回上一层</button>
           </div>
         );
       case 'difficulty-select':
@@ -276,15 +279,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
           <div className="space-y-2 mt-1">
             <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择难度等级</p>
             {[Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD].map(d => (
-              <button key={d} onClick={() => handleSelectDifficulty(diffType, d, diffMediaType)} className="w-full py-3 rounded-xl font-bold border border-blue-200 text-blue-600 bg-white active:bg-blue-50 transition-colors">{d}</button>
+              <button disabled={isDisabled} key={d} onClick={() => handleSelectDifficulty(diffType, d, diffMediaType)} className="w-full py-3 rounded-xl font-bold border border-blue-200 text-blue-600 bg-white active:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{d}</button>
             ))}
-            <button onClick={() => {
+            <button disabled={isDisabled} onClick={() => {
                 if (diffType === TaskType.COLLECTION) {
                     handleBackToMediaType(diffType);
                 } else {
                     handleBackToTaskType();
                 }
-            }} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2">↩️ 返回上一层</button>
+            }} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">↩️ 返回上一层</button>
           </div>
         );
       case 'category-select':
@@ -296,10 +299,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
             <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择任务分类 (当前难度: {catDiff})</p>
             <div className="grid grid-cols-2 gap-2">
               {categories.map(c => (
-                <button key={c} onClick={() => handleSelectCategory(catType, catDiff, c)} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-700 bg-white active:bg-gray-50 text-sm">{c}</button>
+                <button disabled={isDisabled} key={c} onClick={() => handleSelectCategory(catType, catDiff, c)} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-700 bg-white active:bg-gray-50 text-sm disabled:opacity-50 disabled:cursor-not-allowed">{c}</button>
               ))}
             </div>
-            <button onClick={() => handleBackToDifficulty(catType, catMediaType)} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2">↩️ 返回上一层</button>
+            <button disabled={isDisabled} onClick={() => handleBackToDifficulty(catType, catMediaType)} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">↩️ 返回上一层</button>
           </div>
         );
       case 'task-report':
@@ -375,10 +378,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   return (
     <div className="flex flex-col h-full bg-gray-50">
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center px-4 h-16">
+        {!isTaskActive && (
         <button onClick={onBack} className="p-2 -ml-2 text-gray-500 active:bg-gray-100 rounded-full transition-colors">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
         </button>
-        <div className="ml-2 flex flex-col">
+        )}
+        <div className={`flex flex-col ${!isTaskActive ? 'ml-2' : ''}`}>
           <h2 className="text-lg font-black text-gray-900 leading-none">任务中心</h2>
           <span className="text-[10px] font-bold text-emerald-500 uppercase mt-0.5 tracking-tighter">AI DATA NODE ACTIVE</span>
         </div>
@@ -389,12 +394,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {messages.map((msg) => (
+        {messages.map((msg, index) => (
           <div key={msg.id} className={`flex ${msg.sender === 'agent' ? 'justify-start' : 'justify-end'}`}>
             <div className={`max-w-[85%] ${msg.sender === 'agent' 
               ? msg.type === 'text' ? 'bg-white text-gray-800 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 p-4' : 'w-full'
               : 'bg-blue-600 text-white rounded-2xl rounded-tr-sm shadow-md p-3.5'}`}>
-              {renderMessageContent(msg)}
+              {renderMessageContent(msg, index === messages.length - 1)}
               <div className={`text-[8px] mt-1 font-bold uppercase tracking-widest opacity-30 ${msg.sender === 'user' ? 'text-right' : ''}`}>
                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>

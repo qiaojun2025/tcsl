@@ -287,12 +287,64 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
       }
       
       let title = `任务：${prompt}`;
+      let taskData: any = { title, prompt };
+
       if (category === CollectionCategory.AUDIO) {
         title = `${difficulty}音频采集`;
-      } else if (category === CollectionCategory.VIDEO) {
-        title = `${difficulty}视频采集`;
+        taskData = { title, prompt };
+      } else {
+        // Image OR Video Collection - Construct Detailed Metadata
+        title = prompt; // Set title to the specific task prompt/subject
+        
+        let desc = prompt;
+        const requirements = [];
+
+        if (category === CollectionCategory.VIDEO) {
+            if (difficulty === Difficulty.EASY) {
+                requirements.push("视频画面清晰");
+                requirements.push("时长需大于5秒");
+                desc = `请拍摄一段清晰的【${prompt}】视频。`;
+            } else if (difficulty === Difficulty.MEDIUM) {
+                requirements.push("画面无剧烈抖动");
+                requirements.push("时长需在8-15秒之间");
+                requirements.push("需包含完整主体动作");
+                desc = `请拍摄一段【${prompt}】的视频，注意时长和稳定性。`;
+            } else {
+                // Hard
+                requirements.push("需符合特定场景描述");
+                requirements.push("时长需在10秒以上");
+                requirements.push("光线充足，运镜平稳");
+                desc = "请仔细阅读上述标题中的具体场景要求，拍摄符合描述的视频片段。";
+            }
+        } else {
+            // Image
+            if (difficulty === Difficulty.EASY) {
+                requirements.push("图片主体清晰可见");
+                requirements.push("内容与描述相符");
+                desc = `请采集一张清晰的【${prompt}】照片。`;
+            } else if (difficulty === Difficulty.MEDIUM) {
+                requirements.push("必须为真实拍摄照片");
+                requirements.push("禁止使用网络图片或截图");
+                requirements.push("图片内容需包含完整主体");
+                desc = `请采集一张【${prompt}】的照片，需保证真实性。`;
+            } else {
+                // Hard
+                requirements.push("需符合特定的场景描述");
+                requirements.push("必须在规定时间内完成拍摄");
+                requirements.push("图片构图完整，光线充足");
+                desc = "请仔细阅读上述标题中的具体场景要求，拍摄符合描述的瞬间。";
+            }
+        }
+        
+        taskData = {
+            title,
+            prompt,
+            theme: category,
+            description: desc,
+            requirements
+        };
       }
-      setCurrentTask({ title, prompt });
+      setCurrentTask(taskData);
     }
     setTimeout(() => setIsLoading(false), 400);
   }, [type, difficulty, category, usedTasks]);
@@ -315,7 +367,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
   // Audio/Video Recording Logic
   const startRecording = async (isVideo: boolean) => {
     try {
-      const constraints = isVideo ? { audio: true, video: { facingMode: "user" } } : { audio: true };
+      const constraints = isVideo ? { audio: true, video: { facingMode: "environment" } } : { audio: true };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (isVideo && videoPreviewRef.current) {
@@ -447,8 +499,6 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
                 setMediaBlob(file);
                 
                 // We don't auto-submit media uploads, user must review and click submit to trigger duration validation logic in handleMediaSubmit
-                // But we still need to add hash later. For now, just setting blob is enough, 
-                // handleMediaSubmit will re-compute hash.
                 setIsUploading(false);
             };
 
@@ -579,45 +629,17 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
             )}
           </div>
         ) : (
-          (category === CollectionCategory.AUDIO || category === CollectionCategory.VIDEO) ? (
-            // AUDIO & VIDEO TASK UI
+          (category === CollectionCategory.AUDIO) ? (
+            // AUDIO UI (Simple)
             <div className="space-y-6 text-center">
               <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                 <p className="text-sm font-bold text-gray-800 leading-relaxed">{currentTask.prompt}</p>
-                {/* Hints */}
-                {category === CollectionCategory.AUDIO && (
-                    <>
-                        {difficulty === Difficulty.EASY && <p className="text-[10px] text-blue-500 mt-2">* 需朗读 5 秒以上</p>}
-                        {difficulty === Difficulty.MEDIUM && <p className="text-[10px] text-orange-500 mt-2">* 请快速开始朗读</p>}
-                        {difficulty === Difficulty.HARD && <p className="text-[10px] text-purple-500 mt-2">* 需采集 10 秒环境音</p>}
-                    </>
-                )}
-                {category === CollectionCategory.VIDEO && (
-                    <>
-                        {difficulty === Difficulty.EASY && <p className="text-[10px] text-blue-500 mt-2">* 需拍摄 5 秒以上</p>}
-                        {difficulty === Difficulty.MEDIUM && <p className="text-[10px] text-orange-500 mt-2">* 需拍摄 8-15 秒</p>}
-                        {difficulty === Difficulty.HARD && <p className="text-[10px] text-purple-500 mt-2">* 建议拍摄 10 秒以上</p>}
-                    </>
-                )}
+                 {difficulty === Difficulty.EASY && <p className="text-[10px] text-blue-500 mt-2">* 需朗读 5 秒以上</p>}
+                 {difficulty === Difficulty.MEDIUM && <p className="text-[10px] text-orange-500 mt-2">* 请快速开始朗读</p>}
+                 {difficulty === Difficulty.HARD && <p className="text-[10px] text-purple-500 mt-2">* 需采集 10 秒环境音</p>}
               </div>
 
               <div className="flex flex-col items-center justify-center space-y-4">
-                {/* Video Preview Area */}
-                {category === CollectionCategory.VIDEO && !mediaBlob && (
-                   <div className="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg relative">
-                      <video ref={videoPreviewRef} className="w-full h-full object-cover" playsInline autoPlay muted />
-                      {!isRecording && <div className="absolute inset-0 flex items-center justify-center text-white/50 text-sm">等待录制或上传...</div>}
-                   </div>
-                )}
-
-                {/* Video Playback Area */}
-                {category === CollectionCategory.VIDEO && mediaBlob && (
-                   <div className="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg">
-                      <video src={URL.createObjectURL(mediaBlob)} className="w-full h-full object-contain" controls />
-                   </div>
-                )}
-
-
                 {mediaBlob ? (
                   <div className="w-full space-y-3 animate-in fade-in slide-in-from-bottom-4">
                     <div className="bg-green-50 text-green-700 py-3 rounded-xl border border-green-200 flex items-center justify-center">
@@ -626,7 +648,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                        <button onClick={() => { setMediaBlob(null); setRecordingDuration(0); }} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-600">重录/重传</button>
-                       <button onClick={() => handleMediaSubmit(category === CollectionCategory.VIDEO)} className="py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg">提交{category === CollectionCategory.VIDEO ? '视频' : '录音'}</button>
+                       <button onClick={() => handleMediaSubmit(false)} className="py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg">提交录音</button>
                     </div>
                   </div>
                 ) : (
@@ -635,7 +657,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
                       <div className="flex flex-col items-center">
                           {isRecording && <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-red-500 font-mono text-2xl font-black">{formatTime(recordingDuration)}</span>}
                           <button 
-                            onClick={isRecording ? stopRecording : () => startRecording(category === CollectionCategory.VIDEO)}
+                            onClick={isRecording ? stopRecording : () => startRecording(false)}
                             className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-all ${isRecording ? 'bg-red-100 border-4 border-red-500' : 'bg-red-500 hover:bg-red-600 border-4 border-red-100'}`}
                           >
                              {isRecording ? (
@@ -646,27 +668,6 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
                           </button>
                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{isRecording ? '正在录制...' : '录制'}</p>
                       </div>
-
-                      {category === CollectionCategory.VIDEO && (
-                      <div className="flex flex-col items-center">
-                           <input 
-                                type="file" 
-                                className="hidden" 
-                                id="media-upload" 
-                                accept="video/*"
-                                onChange={(e) => handleFileUpload(e, true)}
-                                disabled={isUploading || isRecording}
-                           />
-                           <label htmlFor="media-upload" className={`w-20 h-20 rounded-full flex items-center justify-center shadow-xl transition-all border-4 cursor-pointer ${isUploading ? 'bg-gray-100 border-gray-300' : 'bg-blue-500 hover:bg-blue-600 border-blue-100'}`}>
-                                {isUploading ? (
-                                    <div className="w-6 h-6 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                ) : (
-                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                                )}
-                           </label>
-                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">上传</p>
-                      </div>
-                      )}
                     </div>
                   </>
                 )}
@@ -679,38 +680,156 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
               )}
             </div>
           ) : (
-            // IMAGE COLLECTION UI
-            <div className="space-y-4">
-              <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 flex flex-col items-center justify-center bg-gray-50">
-                <span className="text-4xl mb-2">{difficulty === Difficulty.HARD ? '📸' : '🖼️'}</span>
-                <p className="text-[10px] text-gray-400 text-center font-medium leading-relaxed">
-                  {difficulty === Difficulty.HARD ? '高级采集：请根据任务提示，在规定时间内拍摄或上传一张真实的行为照片。' : (difficulty === Difficulty.MEDIUM ? '中级采集：支持上传，将严审时间与位置信息' : '初级采集：支持从相册选取或拍照')}
-                </p>
+            // DETAILED UI (IMAGE OR VIDEO)
+            <div className="space-y-6">
+              {/* 1. Title Area */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5 border border-blue-100">
+                  <div className="flex items-center space-x-2 mb-2">
+                     <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wide">{currentTask.theme || category}</span>
+                     <span className="text-[10px] text-blue-600 font-bold tracking-tight">AI TRAINING DATA</span>
+                  </div>
+                  <h2 className="text-xl font-black text-gray-900 leading-tight mb-2">{currentTask.title}</h2>
+                  <div className="flex items-center text-indigo-600 bg-white/60 backdrop-blur rounded-lg px-3 py-2 text-xs font-bold shadow-sm">
+                      <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                      完成此任务可提升您的贡献值获取效率。
+                  </div>
               </div>
+
+              {/* 2 & 3. Description & Requirements Area (Hidden during recording to save space if needed, but nice to have ref) */}
+              {(!isRecording && !mediaBlob) && (
+              <div className="space-y-4">
+                  <div>
+                      <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">任务描述</h4>
+                      <p className="text-gray-800 text-sm font-medium leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
+                          {currentTask.description}
+                      </p>
+                  </div>
+                  
+                  <div>
+                      <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">任务要求</h4>
+                      <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                          <ul className="space-y-2">
+                              {currentTask.requirements?.map((req: string, idx: number) => (
+                                  <li key={idx} className="flex items-start text-xs text-gray-600 font-medium">
+                                      <svg className="w-3.5 h-3.5 mr-2 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                                      {req}
+                                  </li>
+                              ))}
+                          </ul>
+                      </div>
+                  </div>
+              </div>
+              )}
+
+              {/* 4. Action Area */}
+              <div className="pt-2">
+                  
+                  {/* State: Recording (Video Only) */}
+                  {isRecording && (
+                     <div className="space-y-4 animate-in fade-in">
+                        <div className="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg relative">
+                           <video ref={videoPreviewRef} className="w-full h-full object-cover" playsInline autoPlay muted />
+                           <div className="absolute top-4 right-4 bg-red-600 text-white font-mono text-sm px-2 py-1 rounded animate-pulse">REC {formatTime(recordingDuration)}</div>
+                        </div>
+                        <button onClick={stopRecording} className="w-full py-4 rounded-xl bg-red-600 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center">
+                            <div className="w-4 h-4 bg-white rounded-sm mr-2"></div> 停止录制
+                        </button>
+                     </div>
+                  )}
+
+                  {/* State: Review (Video Only - Image skips this) */}
+                  {(!isRecording && mediaBlob && category === CollectionCategory.VIDEO) && (
+                     <div className="space-y-4 animate-in fade-in">
+                        <div className="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg">
+                           <video src={URL.createObjectURL(mediaBlob)} className="w-full h-full object-contain" controls />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                           <button onClick={() => { setMediaBlob(null); setRecordingDuration(0); }} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-600">重录/重传</button>
+                           <button onClick={() => handleMediaSubmit(true)} className="py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg">提交视频 ({recordingDuration}s)</button>
+                        </div>
+                     </div>
+                  )}
+
+                  {/* State: Initial (Buttons) */}
+                  {(!isRecording && !mediaBlob) && (
+                  <>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                      {/* Upload Button */}
+                      <button 
+                        onClick={() => document.getElementById('file-upload')?.click()}
+                        className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-gray-100 bg-white active:bg-gray-50 transition-colors shadow-sm"
+                        disabled={isUploading}
+                      >
+                          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-2">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                          </div>
+                          <span className="text-xs font-black text-gray-700">上传{category === CollectionCategory.VIDEO ? '视频' : '图片'}</span>
+                      </button>
+
+                      {/* Camera/Shoot Button */}
+                      <button 
+                         onClick={() => {
+                             if (category === CollectionCategory.VIDEO) {
+                                 startRecording(true);
+                             } else {
+                                 document.getElementById('camera-upload')?.click();
+                             }
+                         }}
+                         className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-blue-100 bg-blue-50 active:bg-blue-100 transition-colors shadow-sm"
+                         disabled={isUploading}
+                      >
+                          <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center mb-2 shadow-md">
+                              {category === CollectionCategory.VIDEO ? (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                              ) : (
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                              )}
+                          </div>
+                          <span className="text-xs font-black text-blue-700">{category === CollectionCategory.VIDEO ? '拍摄视频' : '拍摄照片'}</span>
+                      </button>
+                  </div>
+                  
+                  <p className="text-[10px] text-gray-400 text-center leading-tight px-4">
+                      所有上传内容均需人工与AI双重审核，请务必提交清晰且符合上述要求的{category === CollectionCategory.VIDEO ? '视频' : '图片'}。
+                  </p>
+                  </>
+                  )}
+              </div>
+              
               <input 
                 type="file" 
                 className="hidden" 
-                id="upload" 
+                id="file-upload" 
+                accept={category === CollectionCategory.VIDEO ? "video/*" : "image/*"}
+                onChange={(e) => handleFileUpload(e, category === CollectionCategory.VIDEO)}
+                disabled={isUploading}
+              />
+              <input 
+                type="file" 
+                className="hidden" 
+                id="camera-upload" 
                 accept="image/*" 
+                capture="environment"
                 onChange={(e) => handleFileUpload(e, false)}
                 disabled={isUploading}
               />
-              <label htmlFor="upload" className={`block w-full py-4 rounded-xl text-white font-black text-center shadow-lg active:scale-[0.98] transition-all ${isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 active:bg-green-700 cursor-pointer'}`}>
-                {isUploading ? (
-                    <div className="flex items-center justify-center">
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                        <span>正在校验图片...</span>
-                    </div>
-                ) : (
-                    '点击上传/拍摄照片'
-                )}
-              </label>
+              
+              {isUploading && (
+                   <div className="flex items-center justify-center py-2 text-green-600 font-bold text-xs bg-green-50 rounded-lg">
+                        <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+                        <span>正在校验并上传...</span>
+                   </div>
+              )}
+
               {showDuplicateWarning && (
                   <div className="text-center text-red-500 bg-red-50 border border-red-200 p-2 rounded-lg text-xs font-bold animate-shake">
-                      您已提交过这张图片，请选择一张新的图片。
+                      ⚠️ 您已提交过此文件，请拍摄或选择新的文件。
                   </div>
               )}
-              <button onClick={() => submitResult('skipped')} className="w-full text-gray-400 text-[10px] font-bold uppercase py-2 tracking-widest">跳过此项任务</button>
+              
+              <button onClick={() => submitResult('skipped')} className="w-full text-gray-400 text-[10px] font-bold uppercase py-3 tracking-widest hover:text-gray-600 transition-colors">
+                  跳过此任务
+              </button>
             </div>
           )
         )}
