@@ -318,10 +318,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
             </div>
             <div className="space-y-2 border-t border-b border-gray-100 py-3 mb-3">
               <div className="flex justify-between text-sm"><span className="text-gray-400">用户名</span><span className="font-bold">{r.username}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-400">用户ID</span><span className="font-mono text-xs">{r.userId}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-400">任务类型</span><span className="font-bold">{r.type} ({r.difficulty})</span></div>
-              {r.category && <div className="flex justify-between text-sm"><span className="text-gray-400">任务分类</span><span className="font-bold">{r.category}</span></div>}
-              <div className="flex justify-between text-sm"><span className="text-gray-400">开始时间</span><span className="font-mono text-xs">{new Date(r.startTime).toLocaleString('zh-CN')}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-400">任务ID</span><span className="font-mono text-xs">{r.taskNumber}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-400">任务类型</span><span className="font-bold">{r.type}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-gray-400">任务级别</span><span className="font-bold">{r.difficulty}</span></div>
+              {r.category && <div className="flex justify-between text-sm"><span className="text-gray-400">采集任务分类</span><span className="font-bold">{r.category}</span></div>}
+              <div className="flex justify-between text-sm"><span className="text-gray-400">任务开始时间</span><span className="font-mono text-xs">{new Date(r.startTime).toLocaleTimeString()}</span></div>
               <div className="flex justify-between text-sm"><span className="text-gray-400">任务耗时</span><span className="font-bold">{formatDuration(r.duration)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-gray-400">任务准确率</span><span className="font-bold text-green-600">{r.accuracy}</span></div>
             </div>

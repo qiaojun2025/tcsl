@@ -5,7 +5,7 @@ import { UserStats, TaskType, Difficulty, CollectionCategory, TaskCompletionReco
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
-  const [showAd, setShowAd] = useState(true);
+  const [adCountdown, setAdCountdown] = useState(10);
   
   const [stats, setStats] = useState<UserStats>(() => {
     const saved = localStorage.getItem('web3_task_stats_cumulative');
@@ -45,11 +45,13 @@ const App: React.FC = () => {
   }, [taskRecords]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowAd(false);
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (adCountdown > 0) {
+      const timer = setTimeout(() => {
+        setAdCountdown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [adCountdown]);
 
   const handleUpdateTaskCompletion = (
     score: number, 
@@ -151,9 +153,11 @@ const App: React.FC = () => {
       </div>
 
       {/* Anchor Ad Banner - Fixed Height (160px) at Bottom - VIB AI Promotion */}
-      {showAd && (
+      {adCountdown > 0 && (
         <div className="h-[160px] shrink-0 w-full bg-white border-t border-gray-100 z-50 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom duration-500">
-          <div className="absolute top-0 right-0 bg-gray-100 text-[10px] text-gray-400 px-2 py-0.5 rounded-bl z-10">广告</div>
+          <div className="absolute top-0 right-0 bg-gray-100 text-[10px] text-gray-400 px-2 py-0.5 rounded-bl z-10 font-mono">
+            广告 · {adCountdown}s
+          </div>
           
           <div className="flex-1 flex items-center px-5 relative overflow-hidden">
              {/* Decorative Background Blob */}
