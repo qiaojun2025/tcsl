@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AgentList from './components/AgentList.tsx';
 import ChatInterface from './components/ChatInterface.tsx';
@@ -6,6 +5,7 @@ import { UserStats, TaskType, Difficulty, CollectionCategory, TaskCompletionReco
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
+  const [showAd, setShowAd] = useState(true);
   
   const [stats, setStats] = useState<UserStats>(() => {
     const saved = localStorage.getItem('web3_task_stats_cumulative');
@@ -43,6 +43,13 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('web3_task_records', JSON.stringify(taskRecords));
   }, [taskRecords]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowAd(false);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleUpdateTaskCompletion = (
     score: number, 
@@ -112,24 +119,76 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 max-w-md mx-auto relative overflow-hidden flex flex-col shadow-2xl">
-      {currentView === 'list' ? (
-        <AgentList onSelectAgent={(id) => id === 'task-center' && setCurrentView('chat')} />
-      ) : (
-        <ChatInterface 
-          stats={stats} 
-          taskRecords={taskRecords}
-          onBack={() => setCurrentView('list')} 
-          onUpdateTaskCompletion={handleUpdateTaskCompletion}
-        />
-      )}
-      
-      {currentView === 'list' && (
-        <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 flex justify-around items-center h-16 px-6 z-50">
-          <button className="text-blue-600"><HomeIcon /></button>
-          <button className="text-gray-400"><TaskIcon /></button>
-          <button className="text-gray-400"><CompassIcon /></button>
-          <button className="text-gray-400"><UserIcon /></button>
+    <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex-1 relative overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-hidden relative">
+          {currentView === 'list' ? (
+            <div className="h-full overflow-y-auto pb-20">
+                <AgentList onSelectAgent={(id) => id === 'task-center' && setCurrentView('chat')} />
+            </div>
+          ) : (
+            <div className="h-full">
+                <ChatInterface 
+                stats={stats} 
+                taskRecords={taskRecords}
+                onBack={() => setCurrentView('list')} 
+                onUpdateTaskCompletion={handleUpdateTaskCompletion}
+                />
+            </div>
+          )}
+        </div>
+        
+        {/* Bottom Navigation (Only for List View) */}
+        {currentView === 'list' && (
+            <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 flex justify-around items-center h-16 px-6 z-40">
+            <button className="text-blue-600"><HomeIcon /></button>
+            <button className="text-gray-400"><TaskIcon /></button>
+            <button className="text-gray-400"><CompassIcon /></button>
+            <button className="text-gray-400"><UserIcon /></button>
+            </div>
+        )}
+      </div>
+
+      {/* Anchor Ad Banner - Fixed Height (160px) at Bottom - VIB AI Promotion */}
+      {showAd && (
+        <div className="h-[160px] shrink-0 w-full bg-white border-t border-gray-100 z-50 flex flex-col relative shadow-[0_-8px_30px_rgba(0,0,0,0.04)] animate-in fade-in slide-in-from-bottom duration-500">
+          <div className="absolute top-0 right-0 bg-gray-100 text-[10px] text-gray-400 px-2 py-0.5 rounded-bl z-10">广告</div>
+          
+          <div className="flex-1 flex items-center px-5 relative overflow-hidden">
+             {/* Decorative Background Blob */}
+             <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+
+             {/* App Icon */}
+             <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200 shrink-0 mr-4 relative group cursor-pointer active:scale-95 transition-transform">
+                <div className="absolute inset-0 bg-white opacity-10 rounded-2xl transform rotate-3 group-hover:rotate-6 transition-transform"></div>
+                <span className="text-3xl font-black text-white italic tracking-tighter relative z-10">VIB</span>
+             </div>
+             
+             {/* Text Content */}
+             <div className="flex-1 flex flex-col justify-center min-w-0 pr-2">
+                <div className="flex items-center mb-1">
+                    <h3 className="text-xl font-black text-gray-900 leading-none mr-2">VIB AI</h3>
+                    <span className="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-1.5 py-0.5 rounded">Featured</span>
+                </div>
+                <p className="text-sm text-gray-500 font-medium leading-snug mb-2 line-clamp-2">
+                   您的专属 AI 伙伴。沉浸式对话，情感陪伴，全能助手。
+                </p>
+                <div className="flex items-center space-x-1">
+                   {[1,2,3,4,5].map(i => (
+                     <svg key={i} className="w-3.5 h-3.5 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                   ))}
+                   <span className="text-xs text-gray-400 font-medium ml-1">4.9</span>
+                </div>
+             </div>
+
+             {/* Action Button */}
+             <div className="flex flex-col items-center justify-center shrink-0">
+                <button className="bg-black text-white w-[88px] h-[36px] rounded-full font-bold text-sm shadow-lg active:scale-95 transition-all flex items-center justify-center hover:bg-gray-800">
+                    打开
+                </button>
+             </div>
+          </div>
         </div>
       )}
     </div>
