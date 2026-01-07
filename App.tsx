@@ -146,7 +146,7 @@ const App: React.FC = () => {
         <div className="flex-1 flex flex-col p-6 bg-white">
           <div className="mt-12 mb-8">
             <h1 className="text-3xl font-black text-gray-900 mb-2">添加账户</h1>
-            <p className="text-gray-500 text-sm">将现有邮件账户添加为VIB AI用户</p>
+            <p className="text-gray-500 text-sm">将现有邮件账户添加为VIB用户</p>
           </div>
           
           <div className="flex-1">
@@ -169,6 +169,7 @@ const App: React.FC = () => {
               验证邮件
             </button>
             <button 
+              onClick={() => { setEmail(''); setEmailError(''); }}
               className="w-full py-4 rounded-xl bg-gray-50 text-gray-500 font-bold text-lg active:bg-gray-100 transition-colors"
             >
               取消
@@ -224,13 +225,39 @@ const App: React.FC = () => {
            <h2 className="text-2xl font-black text-gray-900 mb-2">邮件已发送</h2>
            <p className="text-gray-500 mb-8">请查收您的收件箱并点击验证链接。</p>
            
-           <div className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100">
+           <div className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-left">
               <p className="text-xs text-gray-400 uppercase font-bold mb-2">模拟邮件内容</p>
-              <div className="bg-white p-4 rounded-lg shadow-sm text-left">
-                  <p className="font-bold text-sm mb-1">来自: VIB AI 安全中心</p>
-                  <p className="text-xs text-blue-600 underline cursor-pointer" onClick={handleVerifyLinkClick}>
-                    点击此处验证您的账户 (Verify Account)
+              <div className="bg-white p-5 rounded-lg shadow-sm text-sm text-gray-800 leading-relaxed space-y-3 font-sans border border-gray-100">
+                  <h3 className="font-bold text-lg text-gray-900 border-b pb-2 mb-2">确认你的VIB帐户的电子邮件地址</h3>
+                  
+                  <p>你好!</p>
+                  <p>你似乎已将一个电子邮件地址添加为VIB帐户。</p>
+                  <p>添加了 <span className="font-bold text-blue-600">{email}</span></p>
+                  
+                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-yellow-800 text-xs">
+                    <strong>注意:</strong> 如果尚未登录该帐户，你需要使用已验证的电子邮件地址登录。
+                  </div>
+                  
+                  <p>如果你已将此电子邮件地址添加为别名，请使用下面的链接进行验证</p>
+                  <p>
+                    <a 
+                      href="#" 
+                      onClick={(e) => { e.preventDefault(); handleVerifyLinkClick(); }} 
+                      className="text-blue-600 underline break-all font-medium"
+                    >
+                      http://vib.ai/verify/{Math.random().toString(36).substr(2, 10)}
+                    </a>
                   </p>
+
+                  <p>如果你没有提出此请求，请使用下面的链接取消</p>
+                  <p>
+                    <a href="#" onClick={(e) => e.preventDefault()} className="text-gray-400 underline break-all text-xs">
+                      http://vib.ai/cancel/request
+                    </a>
+                  </p>
+
+                  <p className="pt-2 text-gray-500">谢谢，VIB 帐户团队</p>
+                  <p className="text-xs text-gray-400">隐私声明: http://vib.ai/privacy</p>
               </div>
            </div>
         </div>
