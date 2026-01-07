@@ -138,13 +138,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
           setActiveTask({ type, difficulty });
         }, 400);
     } else {
-        // Collection Flow
+        // Collection Flow: After difficulty, ask for Category (Image only) or Start (Audio/Video)
         if (mediaType === 'IMAGE') {
            setTimeout(() => addMessage({ taskType: type, difficulty, mediaType }, 'agent', 'category-select'), 400);
         } else {
            const category = mediaType === 'AUDIO' ? CollectionCategory.AUDIO : CollectionCategory.VIDEO;
            setTimeout(() => {
-              addMessage(`好的，已锁定【${difficulty}】级别的【${category}】采集任务。正在匹配验证节点...`, 'agent', 'text');
+              addMessage(`好的，已锁定【${difficulty}】级别的【${category}】采集任务。请查看任务预览...`, 'agent', 'text');
               setActiveTask({ type, difficulty, category });
            }, 400);
         }
@@ -155,7 +155,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   const handleSelectCategory = (type: TaskType, difficulty: Difficulty, category: CollectionCategory) => {
     addMessage(`分类：${category}`, 'user');
     setTimeout(() => {
-      addMessage(`好的，已锁定【${difficulty}】级别的【${category}】采集任务。正在匹配验证节点...`, 'agent', 'text');
+      addMessage(`好的，已锁定【${difficulty}】级别的【${category}】采集任务。请查看任务预览...`, 'agent', 'text');
       setActiveTask({ type, difficulty, category });
     }, 400);
   };

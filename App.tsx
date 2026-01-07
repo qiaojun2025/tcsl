@@ -4,7 +4,10 @@ import ChatInterface from './components/ChatInterface.tsx';
 import { UserStats, TaskType, Difficulty, CollectionCategory, TaskCompletionRecord } from './types.ts';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
+  // Views: 'email-entry' -> 'email-confirm' -> 'email-sent' -> 'list' -> 'chat'
+  const [currentView, setCurrentView] = useState<'email-entry' | 'email-confirm' | 'email-sent' | 'list' | 'chat'>('email-entry');
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   
   const [stats, setStats] = useState<UserStats>(() => {
     const saved = localStorage.getItem('web3_task_stats_cumulative');
@@ -42,6 +45,32 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('web3_task_records', JSON.stringify(taskRecords));
   }, [taskRecords]);
+
+  // Email Flow Handlers
+  const handleVerifyEmailInput = () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('请输入有效的电子邮件地址');
+      return;
+    }
+    setEmailError('');
+    setCurrentView('email-confirm');
+  };
+
+  const handleSendEmail = () => {
+    // Simulate sending delay
+    setCurrentView('email-sent');
+  };
+
+  const handleVerifyLinkClick = () => {
+    // Update username based on email
+    const newUsername = email.split('@')[0];
+    setStats(prev => ({
+        ...prev,
+        username: newUsername
+    }));
+    setCurrentView('list');
+  };
 
   const handleUpdateTaskCompletion = (
     score: number, 
@@ -109,6 +138,105 @@ const App: React.FC = () => {
       return newStats;
     });
   };
+
+  // Render Email Entry View
+  if (currentView === 'email-entry') {
+    return (
+      <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
+        <div className="flex-1 flex flex-col p-6 bg-white">
+          <div className="mt-12 mb-8">
+            <h1 className="text-3xl font-black text-gray-900 mb-2">添加账户</h1>
+            <p className="text-gray-500 text-sm">将现有邮件账户添加为VIB AI用户</p>
+          </div>
+          
+          <div className="flex-1">
+            <label className="block text-sm font-bold text-gray-700 mb-2">电子邮件</label>
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              className="w-full p-4 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-gray-900 font-medium"
+            />
+            {emailError && <p className="text-red-500 text-xs mt-2 font-medium">{emailError}</p>}
+          </div>
+
+          <div className="space-y-3 mt-8">
+            <button 
+              onClick={handleVerifyEmailInput}
+              className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg active:bg-blue-700 transition-colors"
+            >
+              验证邮件
+            </button>
+            <button 
+              className="w-full py-4 rounded-xl bg-gray-50 text-gray-500 font-bold text-lg active:bg-gray-100 transition-colors"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Email Confirmation View
+  if (currentView === 'email-confirm') {
+    return (
+      <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
+        <div className="flex-1 flex flex-col p-6 bg-white">
+          <div className="mt-12 mb-6">
+            <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">
+              ✉️
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 mb-4">验证邮箱</h1>
+            <p className="text-gray-600 leading-relaxed">
+              你需要验证你拥有此电子邮件地址。我们将发送一封电子邮件，其中包含指向 <span className="font-bold text-gray-900">{email}</span> 的链接。请遵循邮件中的指示以继续操作。
+            </p>
+          </div>
+
+          <div className="mt-auto space-y-3">
+            <button 
+              onClick={handleSendEmail}
+              className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg active:bg-blue-700 transition-colors"
+            >
+              发送电子邮件
+            </button>
+            <button 
+              onClick={() => setCurrentView('email-entry')}
+              className="w-full py-4 rounded-xl bg-white border border-gray-200 text-gray-600 font-bold text-lg active:bg-gray-50 transition-colors"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Email Sent / Link Simulation View
+  if (currentView === 'email-sent') {
+    return (
+      <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white text-center">
+           <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 animate-pulse">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+           </div>
+           <h2 className="text-2xl font-black text-gray-900 mb-2">邮件已发送</h2>
+           <p className="text-gray-500 mb-8">请查收您的收件箱并点击验证链接。</p>
+           
+           <div className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100">
+              <p className="text-xs text-gray-400 uppercase font-bold mb-2">模拟邮件内容</p>
+              <div className="bg-white p-4 rounded-lg shadow-sm text-left">
+                  <p className="font-bold text-sm mb-1">来自: VIB AI 安全中心</p>
+                  <p className="text-xs text-blue-600 underline cursor-pointer" onClick={handleVerifyLinkClick}>
+                    点击此处验证您的账户 (Verify Account)
+                  </p>
+              </div>
+           </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
