@@ -91,8 +91,8 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
-  // State for Task Intro Screen
-  const [showIntro, setShowIntro] = useState(true);
+  // State for Task Intro Screen - Only show for Collection Tasks
+  const [showIntro, setShowIntro] = useState(type === TaskType.COLLECTION);
 
   // Audio/Video specific states
   const [isRecording, setIsRecording] = useState(false);
