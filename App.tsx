@@ -4,10 +4,13 @@ import ChatInterface from './components/ChatInterface.tsx';
 import { UserStats, TaskType, Difficulty, CollectionCategory, TaskCompletionRecord } from './types.ts';
 
 const App: React.FC = () => {
-  // Views: 'email-entry' -> 'email-confirm' -> 'email-sent' -> 'list' -> 'chat'
-  const [currentView, setCurrentView] = useState<'email-entry' | 'email-confirm' | 'email-sent' | 'list' | 'chat'>('email-entry');
+  // Views: 'email-entry' -> 'email-sent' (simulation) -> 'email-verify-code' -> 'list' -> 'chat'
+  const [currentView, setCurrentView] = useState<'email-entry' | 'email-verify-code' | 'email-sent' | 'list' | 'chat'>('email-entry');
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [codeInputError, setCodeInputError] = useState('');
   
   const [stats, setStats] = useState<UserStats>(() => {
     const saved = localStorage.getItem('web3_task_stats_cumulative');
@@ -37,7 +40,6 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
-
   useEffect(() => {
     localStorage.setItem('web3_task_stats_cumulative', JSON.stringify(stats));
   }, [stats]);
@@ -47,29 +49,30 @@ const App: React.FC = () => {
   }, [taskRecords]);
 
   // Email Flow Handlers
-  const handleVerifyEmailInput = () => {
+  const handleRequestCode = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setEmailError('请输入有效的电子邮件地址');
       return;
     }
     setEmailError('');
-    setCurrentView('email-confirm');
-  };
-
-  const handleSendEmail = () => {
-    // Simulate sending delay
+    // Generate a simple 5-digit code for simulation
+    const code = Math.floor(10000 + Math.random() * 90000).toString();
+    setGeneratedCode(code);
     setCurrentView('email-sent');
   };
 
-  const handleVerifyLinkClick = () => {
-    // Update username based on email
-    const newUsername = email.split('@')[0];
-    setStats(prev => ({
-        ...prev,
-        username: newUsername
-    }));
-    setCurrentView('list');
+  const handleVerifyCode = () => {
+    if (verificationCode === generatedCode) {
+      const newUsername = email.split('@')[0];
+      setStats(prev => ({
+          ...prev,
+          username: newUsername
+      }));
+      setCurrentView('list');
+    } else {
+      setCodeInputError('验证码错误，请重新输入');
+    }
   };
 
   const handleUpdateTaskCompletion = (
@@ -139,14 +142,16 @@ const App: React.FC = () => {
     });
   };
 
-  // Render Email Entry View
+  // Render Add Email View
   if (currentView === 'email-entry') {
     return (
       <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
         <div className="flex-1 flex flex-col p-6 bg-white">
           <div className="mt-12 mb-8">
             <h1 className="text-3xl font-black text-gray-900 mb-2">添加账户</h1>
-            <p className="text-gray-500 text-sm">将现有邮件账户添加为VIB用户</p>
+            <p className="text-gray-500 text-sm leading-relaxed">
+              将现有邮件账户添加为VIB用户，你需要验证你拥有此电子邮件地址。我们将发送验证码到以上邮箱。请填写邮件中的验证码以继续。
+            </p>
           </div>
           
           <div className="flex-1">
@@ -161,52 +166,54 @@ const App: React.FC = () => {
             {emailError && <p className="text-red-500 text-xs mt-2 font-medium">{emailError}</p>}
           </div>
 
-          <div className="space-y-3 mt-8">
+          <div className="mt-8">
             <button 
-              onClick={handleVerifyEmailInput}
+              onClick={handleRequestCode}
               className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg active:bg-blue-700 transition-colors"
             >
               验证邮件
             </button>
-            <button 
-              onClick={() => { setEmail(''); setEmailError(''); }}
-              className="w-full py-4 rounded-xl bg-gray-50 text-gray-500 font-bold text-lg active:bg-gray-100 transition-colors"
-            >
-              取消
-            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  // Render Email Confirmation View
-  if (currentView === 'email-confirm') {
+  // Render Verification Code View
+  if (currentView === 'email-verify-code') {
     return (
       <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
         <div className="flex-1 flex flex-col p-6 bg-white">
-          <div className="mt-12 mb-6">
-            <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 text-3xl">
-              ✉️
-            </div>
-            <h1 className="text-2xl font-black text-gray-900 mb-4">验证邮箱</h1>
-            <p className="text-gray-600 leading-relaxed">
-              你需要验证你拥有此电子邮件地址。我们将发送一封电子邮件，其中包含指向 <span className="font-bold text-gray-900">{email}</span> 的链接。请遵循邮件中的指示以继续操作。
-            </p>
+          <div className="mt-12 mb-8">
+            <h1 className="text-3xl font-black text-gray-900 mb-2">校验验证码</h1>
+            <p className="text-gray-500 text-sm">请输入发送至 {email} 的验证码。</p>
+          </div>
+          
+          <div className="flex-1">
+            <label className="block text-sm font-bold text-gray-700 mb-2">验证码</label>
+            <input 
+              type="text" 
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              placeholder="00000"
+              maxLength={5}
+              className="w-full p-4 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-gray-900 font-black tracking-widest text-center text-2xl"
+            />
+            {codeInputError && <p className="text-red-500 text-xs mt-2 font-medium">{codeInputError}</p>}
           </div>
 
-          <div className="mt-auto space-y-3">
+          <div className="space-y-3 mt-8">
             <button 
-              onClick={handleSendEmail}
+              onClick={handleVerifyCode}
               className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg active:bg-blue-700 transition-colors"
             >
-              发送电子邮件
+              校验
             </button>
             <button 
               onClick={() => setCurrentView('email-entry')}
-              className="w-full py-4 rounded-xl bg-white border border-gray-200 text-gray-600 font-bold text-lg active:bg-gray-50 transition-colors"
+              className="w-full py-4 rounded-xl bg-gray-50 text-gray-500 font-bold text-lg active:bg-gray-100 transition-colors"
             >
-              取消
+              返回
             </button>
           </div>
         </div>
@@ -214,52 +221,28 @@ const App: React.FC = () => {
     );
   }
 
-  // Render Email Sent / Link Simulation View
+  // Render Simulated Email Screen
   if (currentView === 'email-sent') {
     return (
       <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
-        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white text-center">
-           <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 animate-pulse">
-              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-           </div>
-           <h2 className="text-2xl font-black text-gray-900 mb-2">邮件已发送</h2>
-           <p className="text-gray-500 mb-8">请查收您的收件箱并点击验证链接。</p>
-           
-           <div className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-left">
-              <p className="text-xs text-gray-400 uppercase font-bold mb-2">模拟邮件内容</p>
-              <div className="bg-white p-5 rounded-lg shadow-sm text-sm text-gray-800 leading-relaxed space-y-3 font-sans border border-gray-100">
-                  <h3 className="font-bold text-lg text-gray-900 border-b pb-2 mb-2">确认你的VIB帐户的电子邮件地址</h3>
-                  
-                  <p>你好!</p>
-                  <p>你似乎已将一个电子邮件地址添加为VIB帐户。</p>
-                  <p>添加了 <span className="font-bold text-blue-600">{email}</span></p>
-                  
-                  <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-100 text-yellow-800 text-xs">
-                    <strong>注意:</strong> 如果尚未登录该帐户，你需要使用已验证的电子邮件地址登录。
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white text-left">
+           <div className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 mb-6">
+              <p className="text-[10px] text-gray-400 uppercase font-bold mb-2">模拟邮件内容 (Inbox)</p>
+              <div className="bg-white p-5 rounded-lg shadow-sm text-sm text-gray-800 leading-relaxed space-y-4 font-sans border border-gray-100">
+                  <h3 className="font-bold text-lg text-gray-900 border-b pb-2 mb-2">欢迎使用VIB</h3>
+                  <p className="font-medium">你的VIB 账号是：<span className="text-blue-600 font-bold">{email}</span></p>
+                  <p className="font-medium">验证码是：<span className="text-2xl font-black text-gray-900">{generatedCode}</span></p>
+                  <div className="pt-4 border-t border-gray-50 text-xs text-gray-400">
+                    此邮件为系统自动发送，请勿直接回复。
                   </div>
-                  
-                  <p>如果你已将此电子邮件地址添加为别名，请使用下面的链接进行验证</p>
-                  <p>
-                    <a 
-                      href="#" 
-                      onClick={(e) => { e.preventDefault(); handleVerifyLinkClick(); }} 
-                      className="text-blue-600 underline break-all font-medium"
-                    >
-                      http://vib.ai/verify/{Math.random().toString(36).substr(2, 10)}
-                    </a>
-                  </p>
-
-                  <p>如果你没有提出此请求，请使用下面的链接取消</p>
-                  <p>
-                    <a href="#" onClick={(e) => e.preventDefault()} className="text-gray-400 underline break-all text-xs">
-                      http://vib.ai/cancel/request
-                    </a>
-                  </p>
-
-                  <p className="pt-2 text-gray-500">谢谢，VIB 帐户团队</p>
-                  <p className="text-xs text-gray-400">隐私声明: http://vib.ai/privacy</p>
               </div>
            </div>
+           <button 
+             onClick={() => setCurrentView('email-verify-code')}
+             className="w-full py-4 rounded-xl bg-gray-900 text-white font-bold text-lg shadow-lg active:scale-95 transition-transform"
+           >
+             去填写验证码
+           </button>
         </div>
       </div>
     );
@@ -267,7 +250,6 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
-      {/* Main Content Area */}
       <div className="flex-1 relative overflow-hidden flex flex-col">
         <div className="flex-1 overflow-hidden relative">
           {currentView === 'list' ? (
@@ -286,7 +268,6 @@ const App: React.FC = () => {
           )}
         </div>
         
-        {/* Bottom Navigation (Only for List View) */}
         {currentView === 'list' && (
             <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 flex justify-around items-center h-16 px-6 z-40">
             <button className="text-blue-600"><HomeIcon /></button>
