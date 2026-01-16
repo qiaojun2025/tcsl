@@ -142,15 +142,15 @@ const App: React.FC = () => {
     });
   };
 
-  // Render Add Email View
+  // Render Add Email View (添加用户)
   if (currentView === 'email-entry') {
     return (
       <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
         <div className="flex-1 flex flex-col p-6 bg-white">
           <div className="mt-12 mb-8">
-            <h1 className="text-3xl font-black text-gray-900 mb-2">添加账户</h1>
+            <h1 className="text-3xl font-black text-gray-900 mb-2">添加用户</h1>
             <p className="text-gray-500 text-sm leading-relaxed">
-              将现有邮件账户添加为VIB用户，你需要验证你拥有此电子邮件地址。我们将发送验证码到以上邮箱。请填写邮件中的验证码以继续。
+              将现有邮件账户添加为VIB用户，你需要验证你拥有此电子邮件地址。我们将发送验证码到输入的邮箱地址，请填写邮件中的验证码以添加用户。
             </p>
           </div>
           
@@ -166,7 +166,7 @@ const App: React.FC = () => {
             {emailError && <p className="text-red-500 text-xs mt-2 font-medium">{emailError}</p>}
           </div>
 
-          <div className="mt-8">
+          <div className="mt-8 pb-10">
             <button 
               onClick={handleRequestCode}
               className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg active:bg-blue-700 transition-colors"
@@ -179,7 +179,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Render Verification Code View
+  // Render Verification Code View (校验验证码)
   if (currentView === 'email-verify-code') {
     return (
       <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
@@ -197,12 +197,12 @@ const App: React.FC = () => {
               onChange={(e) => setVerificationCode(e.target.value)}
               placeholder="00000"
               maxLength={5}
-              className="w-full p-4 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-gray-900 font-black tracking-widest text-center text-2xl"
+              className="w-full p-4 rounded-xl bg-gray-50 border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all text-gray-900 font-black tracking-widest text-center text-3xl"
             />
             {codeInputError && <p className="text-red-500 text-xs mt-2 font-medium">{codeInputError}</p>}
           </div>
 
-          <div className="space-y-3 mt-8">
+          <div className="space-y-3 mt-8 pb-10">
             <button 
               onClick={handleVerifyCode}
               className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-lg active:bg-blue-700 transition-colors"

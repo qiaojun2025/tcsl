@@ -43,7 +43,7 @@ const COLLECTION_POOLS: Record<CollectionCategory, Record<Difficulty, string[]>>
   },
   [CollectionCategory.AUDIO]: {
     [Difficulty.EASY]: ['朗读：人工智能改变世界', '朗读：Web3重塑价值', '朗读：慢生活与健康', '朗读：区块链信任机制', '朗读：环境保护', '朗读：终身学习', '朗读：阅读的意义', '朗读：健康运动', '朗读：数字经济', '朗读：诚信立本'],
-    [Difficulty.MEDIUM]: ['朗读数字：9527', '朗读：狐狸跳过狗', '朗读：葡萄皮绕口令', '大声说出名字', '朗读：红鲤鱼与绿鲤鱼', '朗读今天日期', '模仿猫叫', '大笑三声', '朗读：八百标兵', '唱一句歌词'],
+    [Difficulty.MEDIUM]: ['朗读数字：9527', '朗读：狐狸跳过狗', '朗读：葡萄皮绕口令', '大声说出名字', '朗读：红鲤鱼与绿鲤鱼', '朗读今天日期', '模仿猫叫', '大声说出名字', '朗读：八百标兵', '唱一句歌词'],
     [Difficulty.HARD]: ['环境音：咖啡厅/街道', '窗外的风雨声', '键盘敲击声', '电视广播背景音', '公交地铁运行声', '厨房做饭声', '公园鸟叫声', '商场人声', '汽车内部声音', '图书馆翻书声']
   },
   [CollectionCategory.VIDEO]: {
@@ -58,7 +58,6 @@ const getSubmittedFileHashes = (): Set<string> => {
         const hashes = localStorage.getItem('submitted_file_hashes');
         return hashes ? new Set(JSON.parse(hashes)) : new Set();
     } catch (e) {
-        console.error("Failed to parse file hashes from localStorage", e);
         return new Set();
     }
 };
@@ -91,10 +90,8 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
   const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   
-  // State for Task Intro Screen - Only show for Collection Tasks
   const [showIntro, setShowIntro] = useState(type === TaskType.COLLECTION);
 
-  // Audio/Video specific states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [mediaBlob, setMediaBlob] = useState<Blob | null>(null);
@@ -102,50 +99,31 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
 
-  // Initialization: Generate Task Queue
   useEffect(() => {
-    // Determine batch size: Video = 1, others = 10
     const count = category === CollectionCategory.VIDEO ? 1 : 10;
     setTotalSteps(count);
     
     const newQueue: any[] = [];
     
     if (type === TaskType.QUICK_JUDGMENT) {
-        // ... (Existing Quick Judgment generation logic, simplified for batch)
-        // Since Quick Judgment generates on the fly in previous logic, we can pre-generate prompts
-        // For consistency with previous code, we will generate "placeholders" here and instantiate content in generateNewTask
-        // But the previous code structure for Quick Judgment relies on generating one by one.
-        // Let's keep Quick Judgment generation dynamic but populate the queue with dummy items to track progress
         for(let i=0; i<count; i++) newQueue.push({ type: 'QUICK', index: i });
     } else {
-        // Collection Tasks
         const pool = COLLECTION_POOLS[category!][difficulty];
-        // Shuffle and pick 'count' items. If pool is smaller, repeat.
         for (let i = 0; i < count; i++) {
-            const prompt = pool[i % pool.length]; // Simple rotation if pool is small
-            // Or random: const prompt = pool[Math.floor(Math.random() * pool.length)];
+            const prompt = pool[Math.floor(Math.random() * pool.length)];
             
-            let title = prompt;
-            let description = prompt;
-            let requirements: string[] = [];
+            let description = `请采集一张【${prompt}】的照片。`;
+            let requirements = ["图片主体清晰可见", "禁止使用网络图片", "光线充足"];
 
             if (category === CollectionCategory.VIDEO) {
                  description = `请拍摄一段清晰的【${prompt}】视频。`;
                  requirements = ["画面无剧烈抖动", "时长需大于5秒", "需包含完整主体动作"];
-                 if (difficulty === Difficulty.HARD) {
-                    description = "请仔细阅读场景要求，拍摄符合描述的视频片段。";
-                    requirements = ["需符合特定场景描述", "光线充足，运镜平稳"];
-                 }
             } else if (category === CollectionCategory.AUDIO) {
-                 description = `请朗读或录制：${prompt}`;
-                 requirements = ["环境安静清晰", "语速适中", `时长需大于${difficulty === Difficulty.HARD ? 10 : 5}秒`];
-            } else {
-                 description = `请采集一张【${prompt}】的照片。`;
-                 requirements = ["图片主体清晰可见", "禁止使用网络图片", "光线充足"];
+                 description = `请录制：${prompt}`;
+                 requirements = ["环境安静清晰", "语速适中", "文件大小限制 2MB 内"];
             }
 
             newQueue.push({
-                title,
                 prompt,
                 description,
                 requirements,
@@ -157,13 +135,11 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     setIsLoading(false);
   }, [type, category, difficulty]);
 
-  // Load current task when step changes
   useEffect(() => {
       if (taskQueue.length > 0 && step <= taskQueue.length) {
           generateTaskContent(taskQueue[step - 1]);
       }
   }, [step, taskQueue]);
-
 
   const generateTaskContent = useCallback((queueItem: any) => {
     setIsLoading(true);
@@ -174,12 +150,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     setIsRecording(false);
     
     if (type === TaskType.QUICK_JUDGMENT) {
-       // ... Existing Quick Judgment Logic ...
-      let target;
-      const targetZh = getRandomCategory(); // Simplified for brevity, ideal to use map
-      // Re-using the random logic from before for actual content
-      const available = CATEGORIES;
-      target = available[Math.floor(Math.random() * available.length)];
+      let target = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
       const targetName = CATEGORY_MAP[target] || target;
 
       if (difficulty === Difficulty.EASY) {
@@ -213,12 +184,10 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
         });
       }
     } else {
-      // Collection Task - use queued item
       setCurrentTask(queueItem);
     }
     setTimeout(() => setIsLoading(false), 300);
   }, [type, difficulty]);
-
 
   useEffect(() => {
     if (timeLeft > 0 && !feedback) {
@@ -231,16 +200,15 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
 
   const getPoints = () => {
     if (category === CollectionCategory.VIDEO) {
-        if (difficulty === Difficulty.EASY) return 4;
-        if (difficulty === Difficulty.MEDIUM) return 8;
-        return 11;
+        if (difficulty === Difficulty.EASY) return 10;
+        if (difficulty === Difficulty.MEDIUM) return 20;
+        return 30;
     }
     if (difficulty === Difficulty.EASY) return 1;
     if (difficulty === Difficulty.MEDIUM) return 3;
     return 6;
   };
 
-  // ... (Media Recording functions remain mostly the same, ensuring validation matches requirements)
   const startRecording = async (isVideo: boolean) => {
     try {
       const constraints = isVideo ? { audio: true, video: { facingMode: "environment" } } : { audio: true };
@@ -264,7 +232,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
       mediaRecorder.start();
       setIsRecording(true);
       timerRef.current = setInterval(() => setRecordingDuration(prev => prev + 1), 1000);
-    } catch (err) { alert(`无法访问${isVideo ? '摄像头' : '麦克风'}`); }
+    } catch (err) { alert(`无法访问设备`); }
   };
 
   const stopRecording = () => {
@@ -275,33 +243,23 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     }
   };
 
-  const handleMediaSubmit = (isVideo: boolean) => {
+  const handleMediaSubmit = async () => {
     if (!mediaBlob) return;
     
-    // Audio Size Validation: < 2MB
-    if (category === CollectionCategory.AUDIO) {
-        const sizeInMB = mediaBlob.size / (1024 * 1024);
-        if (sizeInMB > 2) {
-            alert("音频文件不能超过 2 MB，请重新录制。");
-            setMediaBlob(null); setRecordingDuration(0); return;
-        }
+    if (category === CollectionCategory.AUDIO && mediaBlob.size > 2 * 1024 * 1024) {
+        alert("音频文件不能超过 2 MB，请重新录制。");
+        setMediaBlob(null); setRecordingDuration(0); return;
     }
 
-    // Min duration check
-    if (recordingDuration < 1) { // Assuming minimal check, actual task requirements might vary
-         alert("录制时间太短"); return;
+    const hash = await computeFileHash(mediaBlob);
+    const submittedHashes = getSubmittedFileHashes();
+    if (submittedHashes.has(hash)) {
+        setShowDuplicateWarning(true);
+        setTimeout(() => setShowDuplicateWarning(false), 3000);
+    } else {
+        addSubmittedFileHash(hash);
+        submitResult(true);
     }
-
-    computeFileHash(mediaBlob).then(hash => {
-        const submittedHashes = getSubmittedFileHashes();
-        if (submittedHashes.has(hash)) {
-            setShowDuplicateWarning(true);
-            setTimeout(() => setShowDuplicateWarning(false), 3000);
-        } else {
-            addSubmittedFileHash(hash);
-            submitResult(true);
-        }
-    });
   };
 
   const handleQuickHardSubmit = () => {
@@ -313,12 +271,11 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     submitResult(isCorrect);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, isMedia: boolean = false) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
     const file = event.target.files[0];
     setIsUploading(true);
     
-    // Audio Size Check
     if (category === CollectionCategory.AUDIO && file.size > 2 * 1024 * 1024) {
          alert("音频文件不能超过 2 MB。");
          event.target.value = ''; setIsUploading(false); return;
@@ -327,28 +284,14 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     try {
         const hash = await computeFileHash(file);
         const submittedHashes = getSubmittedFileHashes();
-        // Image Duplicate Check (applied to all file uploads really)
         if (submittedHashes.has(hash)) {
             setShowDuplicateWarning(true);
             setTimeout(() => setShowDuplicateWarning(false), 3000);
             event.target.value = ''; setIsUploading(false); return;
         }
-
-        if (isMedia) {
-             const url = URL.createObjectURL(file);
-             const element = category === CollectionCategory.VIDEO ? document.createElement('video') : document.createElement('audio');
-             element.preload = 'metadata';
-             element.onloadedmetadata = () => {
-                setRecordingDuration(Math.round(element.duration));
-                setMediaBlob(file);
-                setIsUploading(false);
-             };
-             element.src = url;
-        } else {
-             addSubmittedFileHash(hash);
-             submitResult(true);
-             setIsUploading(false);
-        }
+        addSubmittedFileHash(hash);
+        submitResult(true);
+        setIsUploading(false);
     } catch (error) { setIsUploading(false); }
   };
 
@@ -377,130 +320,83 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
     }, 1000);
   };
 
-  const formatTime = (s: number) => {
-    const m = Math.floor(s / 60);
-    const rs = s % 60;
-    return `${m}:${rs.toString().padStart(2, '0')}`;
-  };
-
-  // --------------------------------------------------------------------------------
-  // TASK PREVIEW SCREEN
-  // --------------------------------------------------------------------------------
   if (showIntro) {
-    let reqText = "请拍摄清晰、光线充足的照片。主体需位于画面中心，避免模糊或遮挡。";
-    if (category === CollectionCategory.VIDEO) {
-        reqText = "在人行道上或绕过障碍物正常行走的同时，使用应用内相机录制视频。将相机保持在胸部高度，避免直接拍摄他人的面部。";
-    } else if (category === CollectionCategory.AUDIO) {
-        reqText = "请在安静的环境下录制音频，保持语速适中，吐字清晰。";
-    }
-
     return (
-      <div className="bg-white rounded-2xl p-0 shadow-lg w-full relative overflow-hidden animate-in fade-in max-h-[85vh] flex flex-col">
-         {/* 1. Title Area */}
-         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-blue-100">
-             <div className="flex justify-between items-start mb-2">
-                 <h2 className="text-2xl font-black text-gray-900">{category || type}</h2>
-                 <button onClick={onCancel} className="bg-white p-1 rounded-full text-gray-400 hover:text-red-500 shadow-sm">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
-                 </button>
-             </div>
-             <p className="text-blue-700 text-sm font-medium">参与此项任务可以提高你的报酬结算比例。</p>
+      <div className="bg-white rounded-2xl p-0 shadow-lg w-full relative overflow-hidden flex flex-col max-h-[85vh]">
+         <div className="bg-blue-600 p-6 text-white">
+             <h2 className="text-2xl font-black mb-1">任务预览</h2>
+             <p className="text-blue-100 text-sm">{category} - {difficulty}</p>
          </div>
 
          <div className="p-6 overflow-y-auto space-y-6 flex-1">
-             {/* 2. Task Area */}
              <div>
-                <div className="flex items-center space-x-2 mb-3">
-                    <span className="w-1 h-4 bg-blue-600 rounded-full"></span>
-                    <h3 className="font-bold text-gray-900">任务预览 ({totalSteps}项)</h3>
-                </div>
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
-                    <div className="space-y-3 max-h-40 overflow-y-auto">
-                        {taskQueue.map((t, idx) => (
-                            <div key={idx} className="flex items-start">
-                                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-white border border-gray-200 text-xs font-mono flex items-center justify-center text-gray-500 mr-3 mt-0.5">
-                                    {idx + 1}
-                                </span>
-                                <p className="text-sm text-gray-700 font-medium leading-relaxed">
-                                    {t.prompt || `第 ${idx+1} 条快判任务`}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center">
+                    <span className="w-1.5 h-1.5 bg-blue-600 rounded-full mr-2"></span>
+                    待采集任务 ({totalSteps}项)
+                </h3>
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
+                    {taskQueue.map((t, idx) => (
+                        <div key={idx} className="flex text-sm text-gray-600 font-medium">
+                            <span className="mr-3 text-gray-400 font-mono">#{idx+1}</span>
+                            <span>{t.prompt}</span>
+                        </div>
+                    ))}
                 </div>
              </div>
              
-             {/* 3. Requirements Area */}
              <div>
-                <div className="flex items-center space-x-2 mb-3">
-                    <span className="w-1 h-4 bg-green-500 rounded-full"></span>
-                    <h3 className="font-bold text-gray-900">任务要求</h3>
-                </div>
-                <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
-                    <p className="text-sm text-orange-800 font-medium leading-relaxed">
-                        {reqText}
-                    </p>
-                </div>
+                <h3 className="font-bold text-gray-900 mb-2 flex items-center">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>
+                    任务规范
+                </h3>
+                <ul className="text-xs text-gray-500 space-y-1 ml-3.5 list-disc">
+                    <li>确保环境光线充足，拍摄主体清晰</li>
+                    <li>严禁提交重复、低质量或网络素材</li>
+                    <li>{category === CollectionCategory.AUDIO ? '音频录制需保持安静，吐字清晰' : '提交后的数据将经过共识节点校验'}</li>
+                </ul>
              </div>
          </div>
          
-         {/* 4. Button Area */}
-         <div className="p-6 pt-0 bg-white">
-            <button 
-                onClick={() => setShowIntro(false)}
-                className="w-full py-4 rounded-xl bg-gray-900 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center text-lg mb-3"
-            >
-                开始任务
+         <div className="p-6 pt-0">
+            <button onClick={() => setShowIntro(false)} className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold shadow-lg active:scale-95 transition-transform text-lg mb-3">
+                开始执行
             </button>
-            <button 
-                onClick={onCancel}
-                className="w-full py-3 rounded-xl bg-white border-2 border-gray-100 text-gray-500 font-bold active:bg-gray-50 transition-colors"
-            >
-                返回
+            <button onClick={onCancel} className="w-full py-3 rounded-xl bg-gray-50 text-gray-500 font-bold active:bg-gray-100 transition-colors">
+                退出
             </button>
-            <p className="text-xs text-gray-400 text-center mt-3 font-medium">
-                继续完成采集任务。
-            </p>
          </div>
       </div>
     );
   }
 
-  // --------------------------------------------------------------------------------
-  // ACTION SCREEN (Execution)
-  // --------------------------------------------------------------------------------
-  if (isLoading || !currentTask) return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-lg w-full">
-        <p className="text-gray-400 font-bold animate-pulse">正在加载任务数据...</p>
-    </div>
-  );
+  if (isLoading || !currentTask) return null;
 
   return (
     <div className="bg-white rounded-2xl p-5 shadow-lg w-full relative overflow-hidden animate-in fade-in">
       <div className="flex justify-between items-center mb-4">
-        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-bold">任务进度 {step}/{totalSteps}</span>
-        {timeLeft > 0 && <span className="text-xs font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded">限时 {formatTime(timeLeft)}</span>}
-        <button onClick={() => submitResult('skipped')} className="text-gray-400 hover:text-blue-600 text-xs font-bold underline">跳过此题</button>
+        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">Progress {step}/{totalSteps}</span>
+        <button onClick={() => submitResult('skipped')} className="text-gray-400 hover:text-blue-600 text-xs font-bold underline">退出当前并跳过</button>
       </div>
 
-      <h1 className="text-xl font-bold text-gray-900 mb-4 leading-tight">{currentTask.title}</h1>
+      <h1 className="text-xl font-bold text-gray-900 mb-4 leading-tight">
+        {type === TaskType.QUICK_JUDGMENT ? currentTask.title : currentTask.description}
+      </h1>
 
       {type === TaskType.QUICK_JUDGMENT ? (
-        // ... (Quick Judgment UI kept mostly same)
         <div className="space-y-4">
-            {difficulty === Difficulty.EASY && currentTask.imageUrl && (
+            {difficulty === Difficulty.EASY && (
               <div className="space-y-4">
-                <div className="w-full aspect-square rounded-xl overflow-hidden shadow-inner bg-gray-100">
+                <div className="w-full aspect-square rounded-xl overflow-hidden shadow-inner bg-gray-100 border border-gray-100">
                    <img src={currentTask.imageUrl} className="w-full h-full object-cover" alt="Target" />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {currentTask.options?.map((opt: any) => (
-                    <button key={opt.id} onClick={() => submitResult(opt.id === currentTask.target)} className="py-3 rounded-xl bg-blue-50 text-blue-600 font-bold border border-blue-100 active:bg-blue-100">{opt.label}</button>
+                    <button key={opt.id} onClick={() => submitResult(opt.id === currentTask.target)} className="py-3.5 rounded-xl bg-white text-blue-600 font-bold border-2 border-blue-50 active:bg-blue-50 transition-colors">{opt.label}</button>
                   ))}
                 </div>
               </div>
             )}
-            {difficulty === Difficulty.MEDIUM && currentTask.images && (
+            {difficulty === Difficulty.MEDIUM && (
               <div className="grid grid-cols-3 gap-2">
                 {currentTask.images.map((img: any, i: number) => (
                   <div key={i} onClick={() => submitResult(currentTask.isNegative ? img.cat !== currentTask.target : img.cat === currentTask.target)} className="aspect-square rounded-xl overflow-hidden cursor-pointer active:scale-95 border border-gray-100">
@@ -509,81 +405,78 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, onCompl
                 ))}
               </div>
             )}
-            {difficulty === Difficulty.HARD && currentTask.images && (
+            {difficulty === Difficulty.HARD && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  {currentTask.images.map((img: any, index: number) => (
-                    <div key={img.id} onClick={() => setSelectedIds(prev => prev.includes(img.id) ? prev.filter(x => x !== img.id) : [...prev, img.id])} className={`flex items-center p-2 space-x-4 rounded-xl cursor-pointer border-2 ${selectedIds.includes(img.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}>
-                      <img src={img.url} className="w-16 h-16 object-cover rounded-lg" alt="Option" />
-                      <div className="flex-1 font-semibold text-gray-800">选项 {index + 1}</div>
-                      <div className={`w-6 h-6 rounded-full border-2 ${selectedIds.includes(img.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}></div>
+                <div className="grid grid-cols-2 gap-2">
+                  {currentTask.images.map((img: any) => (
+                    <div key={img.id} onClick={() => setSelectedIds(prev => prev.includes(img.id) ? prev.filter(x => x !== img.id) : [...prev, img.id])} className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer border-4 ${selectedIds.includes(img.id) ? 'border-blue-600' : 'border-transparent'}`}>
+                      <img src={img.url} className="w-full h-full object-cover" alt="Option" />
+                      {selectedIds.includes(img.id) && <div className="absolute top-2 right-2 bg-blue-600 rounded-full p-0.5 text-white"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg></div>}
                     </div>
                   ))}
                 </div>
-                <button onClick={handleQuickHardSubmit} disabled={selectedIds.length === 0} className="w-full py-3 rounded-xl bg-blue-600 text-white font-bold disabled:bg-gray-200">提交</button>
+                <button onClick={handleQuickHardSubmit} disabled={selectedIds.length === 0} className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold shadow-lg disabled:bg-gray-100 disabled:text-gray-400">提交选择</button>
               </div>
             )}
         </div>
       ) : (
-        // Collection Task UI
         <div className="space-y-4">
-            <div className="bg-gray-50 rounded-xl p-4 text-sm text-gray-700 font-medium leading-relaxed border border-gray-100 mb-4">
-                {currentTask.description}
-            </div>
-
             {isRecording && (
                 <div className="space-y-4">
-                <div className="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg relative">
+                <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl relative">
                     <video ref={videoPreviewRef} className="w-full h-full object-cover" playsInline autoPlay muted />
-                    <div className="absolute top-4 right-4 bg-red-600 text-white font-mono text-sm px-2 py-1 rounded animate-pulse">REC {formatTime(recordingDuration)}</div>
+                    <div className="absolute top-4 left-4 flex items-center space-x-2 bg-red-600/90 text-white font-mono text-xs px-2.5 py-1.5 rounded-full animate-pulse">
+                        <span className="w-2 h-2 bg-white rounded-full"></span>
+                        <span>REC {recordingDuration}s</span>
+                    </div>
                 </div>
-                <button onClick={stopRecording} className="w-full py-4 rounded-xl bg-red-600 text-white font-bold shadow-lg">停止录制</button>
+                <button onClick={stopRecording} className="w-full py-4 rounded-xl bg-red-600 text-white font-bold shadow-lg">结束录制</button>
                 </div>
             )}
 
             {!isRecording && mediaBlob && (
                 <div className="space-y-4">
-                <div className="w-full aspect-video bg-gray-900 rounded-xl overflow-hidden flex items-center justify-center">
-                    {category === CollectionCategory.VIDEO ? <video src={URL.createObjectURL(mediaBlob)} className="w-full h-full object-contain" controls /> : <div className="text-white font-bold">已录制 ({recordingDuration}s)</div>}
+                <div className="w-full aspect-video bg-gray-900 rounded-2xl overflow-hidden flex items-center justify-center border-4 border-gray-100">
+                    {category === CollectionCategory.VIDEO ? <video src={URL.createObjectURL(mediaBlob)} className="w-full h-full object-contain" controls /> : <div className="text-white font-bold text-center p-4">🎙️ 已就绪 ({recordingDuration}s)<br/><span className="text-[10px] text-gray-500">{(mediaBlob.size / 1024 / 1024).toFixed(2)} MB</span></div>}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => { setMediaBlob(null); setRecordingDuration(0); }} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-600">重录</button>
-                    <button onClick={() => handleMediaSubmit(category === CollectionCategory.VIDEO)} className="py-3 rounded-xl bg-blue-600 text-white font-bold">提交</button>
+                <div className="grid grid-cols-2 gap-4">
+                    <button onClick={() => { setMediaBlob(null); setRecordingDuration(0); }} className="py-4 rounded-xl border-2 border-gray-100 font-bold text-gray-500">重录</button>
+                    <button onClick={handleMediaSubmit} className="py-4 rounded-xl bg-blue-600 text-white font-bold shadow-lg">上传提交</button>
                 </div>
                 </div>
             )}
 
             {!isRecording && !mediaBlob && (
                 <div className="grid grid-cols-2 gap-4">
-                    <button onClick={() => document.getElementById('file-upload')?.click()} className="h-32 flex flex-col items-center justify-center rounded-2xl border-2 border-gray-100 bg-white active:bg-gray-50" disabled={isUploading}>
-                        <div className="w-10 h-10 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center mb-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg></div>
-                        <span className="text-sm font-bold text-gray-700">上传文件</span>
+                    <button onClick={() => document.getElementById('file-upload')?.click()} className="h-32 flex flex-col items-center justify-center rounded-2xl border-2 border-gray-100 bg-white active:bg-gray-50 transition-colors" disabled={isUploading}>
+                        <div className="w-12 h-12 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mb-2"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg></div>
+                        <span className="text-sm font-bold text-gray-700">选择文件</span>
                     </button>
                     <button onClick={() => { 
                         if (category === CollectionCategory.VIDEO || category === CollectionCategory.AUDIO) startRecording(category === CollectionCategory.VIDEO); 
                         else document.getElementById('camera-upload')?.click(); 
-                    }} className="h-32 flex flex-col items-center justify-center rounded-2xl border-2 border-blue-50 bg-blue-50 active:bg-blue-100" disabled={isUploading}>
-                        <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center mb-2"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg></div>
-                        <span className="text-sm font-bold text-blue-700">{category === CollectionCategory.VIDEO ? '拍摄视频' : category === CollectionCategory.AUDIO ? '录制' : '拍照'}</span>
+                    }} className="h-32 flex flex-col items-center justify-center rounded-2xl border-2 border-blue-100 bg-blue-50 active:bg-blue-100 transition-colors" disabled={isUploading}>
+                        <div className="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center mb-2"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg></div>
+                        <span className="text-sm font-bold text-blue-700">{category === CollectionCategory.VIDEO ? '拍摄视频' : category === CollectionCategory.AUDIO ? '录制语音' : '实时拍照'}</span>
                     </button>
                 </div>
             )}
             
-            <input type="file" className="hidden" id="file-upload" accept={category === CollectionCategory.VIDEO ? "video/*" : category === CollectionCategory.AUDIO ? "audio/*" : "image/*"} onChange={(e) => handleFileUpload(e, true)} disabled={isUploading} />
-            <input type="file" className="hidden" id="camera-upload" accept="image/*" capture="environment" onChange={(e) => handleFileUpload(e, false)} disabled={isUploading} />
+            <input type="file" className="hidden" id="file-upload" accept={category === CollectionCategory.VIDEO ? "video/*" : category === CollectionCategory.AUDIO ? "audio/*" : "image/*"} onChange={handleFileUpload} disabled={isUploading} />
+            <input type="file" className="hidden" id="camera-upload" accept="image/*" capture="environment" onChange={handleFileUpload} disabled={isUploading} />
             
-            {showDuplicateWarning && <div className="text-center text-red-500 text-xs font-bold animate-shake bg-red-50 p-2 rounded">⚠️ 图片/文件重复，请重新提交</div>}
-            {isUploading && <p className="text-center text-xs text-gray-400">正在上传校验中...</p>}
+            {showDuplicateWarning && <div className="text-center text-red-500 text-xs font-bold animate-shake bg-red-50 p-3 rounded-lg border border-red-100">⚠️ 数据重复校验失败，请勿提交重复内容</div>}
+            {isUploading && <div className="flex items-center justify-center space-x-2"><div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div><p className="text-center text-xs text-gray-500 font-bold uppercase tracking-wider">Verifying & Uploading...</p></div>}
         </div>
       )}
 
       {feedback && (
-        <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center animate-in fade-in duration-300 ${feedback === 'correct' ? 'bg-green-500/90' : feedback === 'wrong' ? 'bg-red-500/90' : 'bg-gray-800/90'}`}>
-          <div className="bg-white rounded-full p-4 mb-2 shadow-xl scale-110">
+        <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center animate-in fade-in duration-300 ${feedback === 'correct' ? 'bg-green-500/95' : feedback === 'wrong' ? 'bg-red-500/95' : 'bg-gray-800/95'}`}>
+          <div className="bg-white rounded-full p-5 mb-3 shadow-2xl scale-110">
             {feedback === 'correct' ? <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" /></svg> : feedback === 'wrong' ? <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M6 18L18 6M6 6l12 12" /></svg> : <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg>}
           </div>
-          <p className="text-white font-black text-xl uppercase tracking-widest">{feedback === 'correct' ? '校验通过' : feedback === 'wrong' ? '校验不匹配' : '已跳过'}</p>
-          {feedback === 'correct' && <p className="text-white text-xs mt-2 font-bold animate-bounce">贡献度 +{getPoints()}</p>}
+          <p className="text-white font-black text-2xl uppercase tracking-tighter">{feedback === 'correct' ? '通过校验' : feedback === 'wrong' ? '不符合标准' : '任务跳过'}</p>
+          {feedback === 'correct' && <p className="text-white text-sm mt-2 font-bold animate-pulse">CONTRIBUTION POINTS +{getPoints()}</p>}
         </div>
       )}
     </div>
