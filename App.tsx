@@ -4,40 +4,63 @@ import AgentList from './components/AgentList.tsx';
 import ChatInterface from './components/ChatInterface.tsx';
 import { UserStats, TaskType, Difficulty, CollectionCategory, TaskCompletionRecord } from './types.ts';
 
+const DEFAULT_STATS: UserStats = {
+  userId: 'UID-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+  username: '探路者_' + Math.floor(Math.random() * 900 + 100),
+  totalDuration: 0, 
+  totalCorrect: 0, 
+  totalAttempted: 0,
+  quickEasyCount: 0, 
+  quickEasyScore: 0,
+  quickMediumCount: 0, 
+  quickMediumScore: 0,
+  quickHardCount: 0, 
+  quickHardScore: 0,
+  collectionEasyCount: 0, 
+  collectionEasyScore: 0,
+  collectionMediumCount: 0, 
+  collectionMediumScore: 0,
+  collectionHardCount: 0, 
+  collectionHardScore: 0,
+  quickCount: 0, 
+  collectionCount: 0, 
+  quickScore: 0, 
+  collectionScore: 0, 
+  totalScore: 0
+};
+
 const App: React.FC = () => {
-  // Views: 'list' -> 'chat'
   const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
   
   const [stats, setStats] = useState<UserStats>(() => {
-    const saved = localStorage.getItem('web3_task_stats_cumulative');
+    const saved = localStorage.getItem('task_stats_v5');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+      try { 
+        const parsed = JSON.parse(saved);
+        // Deeply merge with DEFAULT_STATS to ensure no missing properties
+        return { ...DEFAULT_STATS, ...parsed };
+      } catch (e) { 
+        console.error("Failed to parse stats:", e); 
+      }
     }
-    return {
-      userId: 'WEB3_USER_' + Math.random().toString(36).substr(2, 9),
-      username: '探路者',
-      totalDuration: 0, totalCorrect: 0, totalAttempted: 0,
-      quickEasyCount: 0, quickEasyScore: 0,
-      quickMediumCount: 0, quickMediumScore: 0,
-      quickHardCount: 0, quickHardScore: 0,
-      collectionEasyCount: 0, collectionEasyScore: 0,
-      collectionMediumCount: 0, collectionMediumScore: 0,
-      collectionHardCount: 0, collectionHardScore: 0,
-      quickCount: 0, collectionCount: 0, quickScore: 0, collectionScore: 0, totalScore: 0
-    };
+    return DEFAULT_STATS;
   });
 
   const [taskRecords, setTaskRecords] = useState<TaskCompletionRecord[]>(() => {
-    const saved = localStorage.getItem('web3_task_records');
-    return saved ? JSON.parse(saved) : [];
+    const saved = localStorage.getItem('task_records_v5');
+    try {
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   useEffect(() => {
-    localStorage.setItem('web3_task_stats_cumulative', JSON.stringify(stats));
+    localStorage.setItem('task_stats_v5', JSON.stringify(stats));
   }, [stats]);
 
   useEffect(() => {
-    localStorage.setItem('web3_task_records', JSON.stringify(taskRecords));
+    localStorage.setItem('task_records_v5', JSON.stringify(taskRecords));
   }, [taskRecords]);
 
   const handleUpdateTaskCompletion = (
@@ -49,13 +72,13 @@ const App: React.FC = () => {
   ) => {
     const duration = Math.round((performance.endTime - performance.startTime) / 1000);
     const newRecord: TaskCompletionRecord = {
-      id: `TASK-${performance.endTime}-${Math.random().toString(36).substr(2, 5)}`,
+      id: `SN-${performance.endTime.toString().slice(-6)}`,
       timestamp: performance.endTime,
       startTime: performance.startTime,
       duration,
       type,
       difficulty,
-      category,
+      category: category || undefined,
       score,
       correctCount: performance.correctCount,
       totalCount: performance.totalCount,
@@ -65,31 +88,47 @@ const App: React.FC = () => {
     setStats(prev => {
       const isQuick = type === TaskType.QUICK_JUDGMENT;
       const newStats = { ...prev };
-      newStats.totalDuration += duration;
-      newStats.totalCorrect += performance.correctCount;
-      newStats.totalAttempted += performance.totalCount;
+      
+      newStats.totalDuration = (newStats.totalDuration || 0) + duration;
+      newStats.totalCorrect = (newStats.totalCorrect || 0) + performance.correctCount;
+      newStats.totalAttempted = (newStats.totalAttempted || 0) + performance.totalCount;
 
       if (isQuick) {
-        if (difficulty === Difficulty.EASY) { newStats.quickEasyCount += 1; newStats.quickEasyScore += score; }
-        else if (difficulty === Difficulty.MEDIUM) { newStats.quickMediumCount += 1; newStats.quickMediumScore += score; }
-        else if (difficulty === Difficulty.HARD) { newStats.quickHardCount += 1; newStats.quickHardScore += score; }
+        if (difficulty === Difficulty.EASY) { 
+          newStats.quickEasyCount = (newStats.quickEasyCount || 0) + 1; 
+          newStats.quickEasyScore = (newStats.quickEasyScore || 0) + score; 
+        } else if (difficulty === Difficulty.MEDIUM) { 
+          newStats.quickMediumCount = (newStats.quickMediumCount || 0) + 1; 
+          newStats.quickMediumScore = (newStats.quickMediumScore || 0) + score; 
+        } else if (difficulty === Difficulty.HARD) { 
+          newStats.quickHardCount = (newStats.quickHardCount || 0) + 1; 
+          newStats.quickHardScore = (newStats.quickHardScore || 0) + score; 
+        }
       } else {
-        if (difficulty === Difficulty.EASY) { newStats.collectionEasyCount += 1; newStats.collectionEasyScore += score; }
-        else if (difficulty === Difficulty.MEDIUM) { newStats.collectionMediumCount += 1; newStats.collectionMediumScore += score; }
-        else if (difficulty === Difficulty.HARD) { newStats.collectionHardCount += 1; newStats.collectionHardScore += score; }
+        if (difficulty === Difficulty.EASY) { 
+          newStats.collectionEasyCount = (newStats.collectionEasyCount || 0) + 1; 
+          newStats.collectionEasyScore = (newStats.collectionEasyScore || 0) + score; 
+        } else if (difficulty === Difficulty.MEDIUM) { 
+          newStats.collectionMediumCount = (newStats.collectionMediumCount || 0) + 1; 
+          newStats.collectionMediumScore = (newStats.collectionMediumScore || 0) + score; 
+        } else if (difficulty === Difficulty.HARD) { 
+          newStats.collectionHardCount = (newStats.collectionHardCount || 0) + 1; 
+          newStats.collectionHardScore = (newStats.collectionHardScore || 0) + score; 
+        }
       }
 
-      newStats.quickCount = newStats.quickEasyCount + newStats.quickMediumCount + newStats.quickHardCount;
-      newStats.quickScore = newStats.quickEasyScore + newStats.quickMediumScore + newStats.quickHardScore;
-      newStats.collectionCount = newStats.collectionEasyCount + newStats.collectionMediumCount + newStats.collectionHardCount;
-      newStats.collectionScore = newStats.collectionEasyScore + newStats.collectionMediumScore + newStats.collectionHardScore;
-      newStats.totalScore = newStats.quickScore + newStats.collectionScore;
+      newStats.quickCount = (newStats.quickEasyCount || 0) + (newStats.quickMediumCount || 0) + (newStats.quickHardCount || 0);
+      newStats.quickScore = (newStats.quickEasyScore || 0) + (newStats.quickMediumScore || 0) + (newStats.quickHardScore || 0);
+      newStats.collectionCount = (newStats.collectionEasyCount || 0) + (newStats.collectionMediumCount || 0) + (newStats.collectionHardCount || 0);
+      newStats.collectionScore = (newStats.collectionEasyScore || 0) + (newStats.collectionMediumScore || 0) + (newStats.collectionHardScore || 0);
+      newStats.totalScore = (newStats.quickScore || 0) + (newStats.collectionScore || 0);
+      
       return newStats;
     });
   };
 
   return (
-    <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden">
+    <div className="h-screen bg-gray-50 max-w-md mx-auto relative flex flex-col shadow-2xl overflow-hidden font-sans">
       <div className="flex-1 relative overflow-hidden flex flex-col">
         {currentView === 'list' ? (
           <div className="h-full overflow-y-auto pb-20">
@@ -108,11 +147,11 @@ const App: React.FC = () => {
       </div>
       
       {currentView === 'list' && (
-        <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 flex justify-around items-center h-16 px-6 z-40">
-          <button className="text-blue-600"><HomeIcon /></button>
-          <button className="text-gray-400"><TaskIcon /></button>
-          <button className="text-gray-400"><CompassIcon /></button>
-          <button className="text-gray-400"><UserIcon /></button>
+        <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 flex justify-around items-center h-16 px-6 z-40">
+          <button className="text-blue-600 p-2"><HomeIcon /></button>
+          <button className="text-gray-400 p-2"><TaskIcon /></button>
+          <button className="text-gray-400 p-2"><CompassIcon /></button>
+          <button className="text-gray-400 p-2"><UserIcon /></button>
         </div>
       )}
     </div>
