@@ -2,7 +2,7 @@
 export enum Difficulty {
   EASY = '初级',
   MEDIUM = '中级',
-  HARD = '高级'
+  HARD = '困难'
 }
 
 export enum TaskType {
@@ -17,8 +17,11 @@ export enum CollectionCategory {
   STREET = '街景类',
   LIFE = '生活类',
   AUDIO = '音频类',
-  VIDEO = '视频类'
+  VIDEO = '视频类',
+  CUSTOM = '自定义分类'
 }
+
+export type MediaType = 'IMAGE' | 'AUDIO' | 'VIDEO';
 
 export interface TaskCompletionRecord {
   id: string;
@@ -33,30 +36,24 @@ export interface TaskCompletionRecord {
   totalCount: number;
 }
 
-
 export interface UserStats {
   userId: string;
   username: string;
-  totalDuration: number; // 总耗时（秒）
-  totalCorrect: number;  // 总正确次数
-  totalAttempted: number; // 总尝试次数
-  
-  // 快判任务明细
+  totalDuration: number;
+  totalCorrect: number;
+  totalAttempted: number;
   quickEasyCount: number;
   quickEasyScore: number;
   quickMediumCount: number;
   quickMediumScore: number;
   quickHardCount: number;
   quickHardScore: number;
-  
-  // 采集任务明细
   collectionEasyCount: number;
   collectionEasyScore: number;
   collectionMediumCount: number;
   collectionMediumScore: number;
   collectionHardCount: number;
   collectionHardScore: number;
-
   quickCount: number;
   collectionCount: number;
   quickScore: number;

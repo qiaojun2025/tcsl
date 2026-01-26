@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { Difficulty, TaskType, UserStats, CollectionCategory, TaskCompletionRecord } from '../types.ts';
+import { Difficulty, TaskType, UserStats, CollectionCategory, TaskCompletionRecord, MediaType } from '../types.ts';
 import TaskFlow from './TaskFlow.tsx';
 
 interface Message {
@@ -29,6 +30,7 @@ const Typewriter = memo(({ text, onComplete }: { text: string, onComplete?: () =
   const indexRef = useRef(0);
 
   useEffect(() => {
+    if (!text) return;
     const timer = setInterval(() => {
       setDisplayedText((prev) => prev + text[indexRef.current]);
       indexRef.current++;
@@ -36,67 +38,16 @@ const Typewriter = memo(({ text, onComplete }: { text: string, onComplete?: () =
         clearInterval(timer);
         onComplete?.();
       }
-    }, 20);
+    }, 10);
     return () => clearInterval(timer);
   }, [text, onComplete]);
 
-  return <p className="leading-relaxed">{displayedText}</p>;
+  return <p className="leading-relaxed font-semibold text-gray-800">{displayedText}</p>;
 });
-
-const StatsBreakdown: React.FC<{stats: any, title: string}> = ({ stats, title }) => (
-    <>
-      <div className="mb-3">
-          <p className="font-bold text-sm mb-2">🎯 {title}快判任务</p>
-          <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between items-center bg-gray-50 p-2 rounded-md">
-                  <span className="text-gray-500">初级</span>
-                  <div className="text-right">
-                      <p className="font-bold">{stats.quickEasyScore} <span className="text-gray-400">分</span> / {stats.quickEasyCount} <span className="text-gray-400">次</span></p>
-                  </div>
-              </div>
-              <div className="flex justify-between items-center bg-gray-50 p-2 rounded-md">
-                  <span className="text-gray-500">中级</span>
-                  <div className="text-right">
-                      <p className="font-bold">{stats.quickMediumScore} <span className="text-gray-400">分</span> / {stats.quickMediumCount} <span className="text-gray-400">次</span></p>
-                  </div>
-              </div>
-              <div className="flex justify-between items-center bg-gray-50 p-2 rounded-md">
-                  <span className="text-gray-500">高级</span>
-                  <div className="text-right">
-                      <p className="font-bold">{stats.quickHardScore} <span className="text-gray-400">分</span> / {stats.quickHardCount} <span className="text-gray-400">次</span></p>
-                  </div>
-              </div>
-          </div>
-      </div>
-      <div>
-          <p className="font-bold text-sm mb-2">📸 {title}采集任务</p>
-          <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between items-center bg-gray-50 p-2 rounded-md">
-                  <span className="text-gray-500">初级</span>
-                  <div className="text-right">
-                      <p className="font-bold">{stats.collectionEasyScore} <span className="text-gray-400">分</span> / {stats.collectionEasyCount} <span className="text-gray-400">次</span></p>
-                  </div>
-              </div>
-              <div className="flex justify-between items-center bg-gray-50 p-2 rounded-md">
-                  <span className="text-gray-500">中级</span>
-                  <div className="text-right">
-                      <p className="font-bold">{stats.collectionMediumScore} <span className="text-gray-400">分</span> / {stats.collectionMediumCount} <span className="text-gray-400">次</span></p>
-                  </div>
-              </div>
-              <div className="flex justify-between items-center bg-gray-50 p-2 rounded-md">
-                  <span className="text-gray-500">高级</span>
-                  <div className="text-right">
-                      <p className="font-bold">{stats.collectionHardScore} <span className="text-gray-400">分</span> / {stats.collectionHardCount} <span className="text-gray-400">次</span></p>
-                  </div>
-              </div>
-          </div>
-      </div>
-    </>
-);
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBack, onUpdateTaskCompletion }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [activeTask, setActiveTask] = useState<{type: TaskType, category?: CollectionCategory, difficulty: Difficulty} | null>(null);
+  const [activeTask, setActiveTask] = useState<{type: TaskType, category?: CollectionCategory, difficulty: Difficulty, mediaType?: MediaType} | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const isTaskActive = !!activeTask;
 
@@ -105,13 +56,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       id: Date.now().toString(),
       sender: 'agent',
       type: 'text',
-      payload: "您好！我是 Web3 任务中心 Agent。在这里，您可以参与快判或采集任务，贡献高质量 AI 训练数据并获取社区贡献度。请选择您想要执行的操作：",
+      payload: "您好！我是您的任务中心助手。在这里，您可以通过参与数据标注与采集来贡献价值，并获得相应的贡献度。请选择您想参与的任务：",
       timestamp: Date.now(),
     }]);
     
     setTimeout(() => {
       addMessage("", 'agent', 'task-type-select');
-    }, 1500); // Wait for typewriter
+    }, 1000);
   }, []);
 
   useEffect(() => {
@@ -139,111 +90,74 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
     }
   };
 
-  const handleSelectMediaType = (type: TaskType, mediaType: 'IMAGE' | 'AUDIO' | 'VIDEO') => {
+  const handleSelectMediaType = (type: TaskType, mediaType: MediaType) => {
     let typeLabel = mediaType === 'IMAGE' ? '图片' : mediaType === 'AUDIO' ? '音频' : '视频';
     addMessage(`文件类型：${typeLabel}`, 'user');
     setTimeout(() => addMessage({ taskType: type, mediaType }, 'agent', 'difficulty-select'), 400);
   };
 
-  const handleSelectDifficulty = (type: TaskType, difficulty: Difficulty, mediaType?: 'IMAGE' | 'AUDIO' | 'VIDEO') => {
+  const handleSelectDifficulty = (type: TaskType, difficulty: Difficulty, mediaType?: MediaType) => {
     addMessage(`难度：${difficulty}`, 'user');
-    
     if (type === TaskType.QUICK_JUDGMENT) {
-        setTimeout(() => {
-          setActiveTask({ type, difficulty });
-        }, 400);
+        setTimeout(() => setActiveTask({ type, difficulty }), 400);
     } else {
-        if (mediaType === 'IMAGE') {
-           setTimeout(() => addMessage({ taskType: type, difficulty, mediaType }, 'agent', 'category-select'), 400);
-        } else {
-           const category = mediaType === 'AUDIO' ? CollectionCategory.AUDIO : CollectionCategory.VIDEO;
-           setTimeout(() => {
-              setActiveTask({ type, difficulty, category });
-           }, 400);
-        }
+        setTimeout(() => addMessage({ taskType: type, difficulty, mediaType }, 'agent', 'category-select'), 400);
     }
   };
 
-  const handleSelectCategory = (type: TaskType, difficulty: Difficulty, category: CollectionCategory) => {
+  const handleSelectCategory = (type: TaskType, difficulty: Difficulty, category: CollectionCategory, mediaType?: MediaType) => {
     addMessage(`分类：${category}`, 'user');
-    setTimeout(() => {
-      setActiveTask({ type, difficulty, category });
-    }, 400);
+    setTimeout(() => setActiveTask({ type, difficulty, category, mediaType }), 400);
   };
 
   const handleBackToTaskType = () => {
-    addMessage("返回上一层", 'user');
+    addMessage("返回上一步", 'user');
     setTimeout(() => addMessage("", 'agent', 'task-type-select'), 400);
   };
 
   const handleBackToMediaType = (type: TaskType) => {
-    addMessage("返回上一层", 'user');
+    addMessage("返回选择文件类型", 'user');
     setTimeout(() => addMessage({ taskType: type }, 'agent', 'media-type-select'), 400);
   };
   
-  const handleBackToDifficulty = (type: TaskType, mediaType: 'IMAGE' | 'AUDIO' | 'VIDEO') => {
-    addMessage("返回上一层", 'user');
+  const handleBackToDifficulty = (type: TaskType, mediaType?: MediaType) => {
+    addMessage("返回选择难度", 'user');
     setTimeout(() => addMessage({ taskType: type, mediaType }, 'agent', 'difficulty-select'), 400);
   };
 
   const handleTaskComplete = (score: number, type: TaskType, performance: { correctCount: number; totalCount: number; startTime: number; endTime: number }) => {
     const d = activeTask?.difficulty || Difficulty.EASY;
     const c = activeTask?.category;
-    
     onUpdateTaskCompletion(score, type, d, performance, c);
-    
     setActiveTask(null);
 
-    const reportData = {
-      taskNumber: `TASK-${performance.endTime}`,
+    addMessage({
+      taskNumber: `T${performance.endTime.toString().slice(-6)}`,
       username: stats.username,
       userId: stats.userId,
       timestamp: performance.endTime,
       startTime: performance.startTime,
       duration: Math.round((performance.endTime - performance.startTime) / 1000),
-      type: type,
+      type,
       difficulty: d,
       category: c,
       accuracy: `${performance.correctCount}/${performance.totalCount}`,
-      score: score
-    };
+      score
+    }, 'agent', 'task-report');
     
-    addMessage(reportData, 'agent', 'task-report');
-    setTimeout(() => addMessage("", 'agent', 'task-type-select'), 1000);
+    setTimeout(() => addMessage("", 'agent', 'task-type-select'), 1500);
   };
 
   const showDailyReport = () => {
     addMessage("【我的日报统计】", 'user');
     setTimeout(() => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const startOfDay = today.getTime();
+      const startOfDay = new Date().setHours(0, 0, 0, 0);
       const todaysRecords = taskRecords.filter(r => r.timestamp >= startOfDay);
-
       const dailyStats = todaysRecords.reduce((acc, r) => {
-        acc.totalDuration += r.duration;
-        acc.totalCorrect += r.correctCount;
-        acc.totalAttempted += r.totalCount;
-        acc.totalScore += r.score;
-        const isQuick = r.type === TaskType.QUICK_JUDGMENT;
-
-        if (isQuick) {
-          if (r.difficulty === Difficulty.EASY) { acc.quickEasyCount++; acc.quickEasyScore += r.score; }
-          else if (r.difficulty === Difficulty.MEDIUM) { acc.quickMediumCount++; acc.quickMediumScore += r.score; }
-          else { acc.quickHardCount++; acc.quickHardScore += r.score; }
-        } else {
-          if (r.difficulty === Difficulty.EASY) { acc.collectionEasyCount++; acc.collectionEasyScore += r.score; }
-          else if (r.difficulty === Difficulty.MEDIUM) { acc.collectionMediumCount++; acc.collectionMediumScore += r.score; }
-          else { acc.collectionHardCount++; acc.collectionHardScore += r.score; }
-        }
+        acc.totalDuration += r.duration; acc.totalScore += r.score;
         return acc;
-      }, {
-        totalDuration: 0, totalCorrect: 0, totalAttempted: 0, totalScore: 0,
-        quickEasyCount: 0, quickEasyScore: 0, quickMediumCount: 0, quickMediumScore: 0, quickHardCount: 0, quickHardScore: 0,
-        collectionEasyCount: 0, collectionEasyScore: 0, collectionMediumCount: 0, collectionMediumScore: 0, collectionHardCount: 0, collectionHardScore: 0,
-      });
-
-      addMessage({ ...dailyStats, reportTimestamp: Date.now(), username: stats.username, userId: stats.userId }, 'agent', 'daily-stats-report');
+      }, { totalDuration: 0, totalScore: 0 });
+      addMessage({ ...dailyStats, reportTimestamp: Date.now() }, 'agent', 'daily-stats-report');
       setTimeout(() => addMessage("", 'agent', 'task-type-select'), 600);
     }, 400);
   };
@@ -257,88 +171,70 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
   const renderMessageContent = (msg: Message, isLast: boolean) => {
+    // Buttons are disabled if a task is active OR if it's not the latest message in chat
     const isDisabled = isTaskActive || !isLast;
 
     switch (msg.type) {
-      case 'text': 
-        return isLast && msg.sender === 'agent' 
-          ? <Typewriter text={msg.payload} /> 
-          : <p className="leading-relaxed">{msg.payload}</p>;
-      case 'task-type-select':
-        return (
-          <div className="space-y-2.5 mt-1">
-            <button disabled={isDisabled} onClick={() => handleSelectTaskType(TaskType.QUICK_JUDGMENT)} className="w-full py-3.5 rounded-xl font-bold bg-blue-600 text-white shadow-md active:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">【快判任务】</button>
-            <button disabled={isDisabled} onClick={() => handleSelectTaskType(TaskType.COLLECTION)} className="w-full py-3.5 rounded-xl font-bold bg-green-600 text-white shadow-md active:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">【采集任务】</button>
-            <button disabled={isDisabled} onClick={showDailyReport} className="w-full py-3.5 rounded-xl font-bold bg-indigo-500 text-white shadow-md active:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">【我的日报统计】</button>
-            <button disabled={isDisabled} onClick={showAccountStats} className="w-full py-3.5 rounded-xl font-bold bg-gray-700 text-white shadow-md active:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">【我的账户统计】</button>
-          </div>
-        );
-      case 'media-type-select':
-        const { taskType: mediaTaskType } = msg.payload;
-        return (
-          <div className="space-y-2.5 mt-1">
-             <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择文件类型</p>
-             <button disabled={isDisabled} onClick={() => handleSelectMediaType(mediaTaskType, 'IMAGE')} className="w-full py-3 rounded-xl font-bold bg-white border border-green-200 text-green-700 shadow-sm active:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed">图片</button>
-             <button disabled={isDisabled} onClick={() => handleSelectMediaType(mediaTaskType, 'AUDIO')} className="w-full py-3 rounded-xl font-bold bg-white border border-purple-200 text-purple-700 shadow-sm active:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed">音频</button>
-             <button disabled={isDisabled} onClick={() => handleSelectMediaType(mediaTaskType, 'VIDEO')} className="w-full py-3 rounded-xl font-bold bg-white border border-red-200 text-red-700 shadow-sm active:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed">视频</button>
-             <button disabled={isDisabled} onClick={handleBackToTaskType} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">↩️ 返回上一层</button>
-          </div>
-        );
-      case 'difficulty-select':
-        const { taskType: diffType, mediaType: diffMediaType } = msg.payload;
-        return (
-          <div className="space-y-2 mt-1">
-            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择任务难度</p>
-            {[Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD].map(d => (
-              <button disabled={isDisabled} key={d} onClick={() => handleSelectDifficulty(diffType, d, diffMediaType)} className="w-full py-3 rounded-xl font-bold border border-blue-200 text-blue-600 bg-white active:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{d}</button>
-            ))}
-            <button disabled={isDisabled} onClick={() => {
-                if (diffType === TaskType.COLLECTION) {
-                    handleBackToMediaType(diffType);
-                } else {
-                    handleBackToTaskType();
-                }
-            }} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">↩️ 返回上一层</button>
-          </div>
-        );
+      case 'text': return isLast && msg.sender === 'agent' ? <Typewriter text={msg.payload} /> : <p className="leading-relaxed font-semibold text-gray-800">{msg.payload}</p>;
+      case 'task-type-select': return (
+        <div className="grid grid-cols-1 gap-3 mt-2">
+          <button disabled={isDisabled} onClick={() => handleSelectTaskType(TaskType.QUICK_JUDGMENT)} className="w-full py-4 rounded-2xl font-black bg-blue-600 text-white shadow-lg active:bg-blue-700 transition-all disabled:opacity-50">【快判任务】</button>
+          <button disabled={isDisabled} onClick={() => handleSelectTaskType(TaskType.COLLECTION)} className="w-full py-4 rounded-2xl font-black bg-emerald-600 text-white shadow-lg active:bg-emerald-700 transition-all disabled:opacity-50">【采集任务】</button>
+          <button disabled={isDisabled} onClick={showDailyReport} className="w-full py-4 rounded-2xl font-black bg-indigo-500 text-white shadow-lg active:bg-indigo-600 transition-all disabled:opacity-50">【我的日报统计】</button>
+          <button disabled={isDisabled} onClick={showAccountStats} className="w-full py-4 rounded-2xl font-black bg-slate-700 text-white shadow-lg active:bg-slate-800 transition-all disabled:opacity-50">【我的账户统计】</button>
+        </div>
+      );
+      case 'media-type-select': return (
+        <div className="grid grid-cols-1 gap-2 mt-2">
+           <button disabled={isDisabled} onClick={() => handleSelectMediaType(msg.payload.taskType, 'IMAGE')} className="w-full py-3.5 rounded-2xl font-black bg-white border-2 border-emerald-100 text-emerald-700 active:bg-emerald-50 disabled:opacity-50 transition-colors">图片</button>
+           <button disabled={isDisabled} onClick={() => handleSelectMediaType(msg.payload.taskType, 'AUDIO')} className="w-full py-3.5 rounded-2xl font-black bg-white border-2 border-purple-100 text-purple-700 active:bg-purple-50 disabled:opacity-50 transition-colors">音频</button>
+           <button disabled={isDisabled} onClick={() => handleSelectMediaType(msg.payload.taskType, 'VIDEO')} className="w-full py-3.5 rounded-2xl font-black bg-white border-2 border-rose-100 text-rose-700 active:bg-rose-50 disabled:opacity-50 transition-colors">视频</button>
+           <button disabled={isDisabled} onClick={handleBackToTaskType} className="w-full py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest disabled:opacity-50">↩️ 返回上一层</button>
+        </div>
+      );
+      case 'difficulty-select': return (
+        <div className="grid grid-cols-1 gap-2 mt-2">
+          {[Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD].map(d => (
+            <button disabled={isDisabled} key={d} onClick={() => handleSelectDifficulty(msg.payload.taskType, d, msg.payload.mediaType)} className="w-full py-3.5 rounded-2xl font-black border-2 border-blue-50 text-blue-600 bg-white hover:border-blue-200 active:bg-blue-50 disabled:opacity-50 transition-all">{d}</button>
+          ))}
+          <button disabled={isDisabled} onClick={() => msg.payload.taskType === TaskType.COLLECTION ? handleBackToMediaType(msg.payload.taskType) : handleBackToTaskType()} className="w-full py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest disabled:opacity-50">↩️ 返回上一层</button>
+        </div>
+      );
       case 'category-select':
-        const { difficulty: catDiff, taskType: catType, mediaType: catMediaType } = msg.payload;
-        const categories = Object.values(CollectionCategory).filter(c => c !== CollectionCategory.AUDIO && c !== CollectionCategory.VIDEO);
+        const { taskType: catType, difficulty: catDiff, mediaType: catMedia } = msg.payload;
+        let categories = [];
+        if (catMedia === 'AUDIO') categories = [CollectionCategory.AUDIO];
+        else if (catMedia === 'VIDEO') categories = [CollectionCategory.VIDEO];
+        else categories = [CollectionCategory.ANIMAL, CollectionCategory.PLANT, CollectionCategory.PERSON, CollectionCategory.STREET, CollectionCategory.LIFE];
+        categories.push(CollectionCategory.CUSTOM);
         return (
-          <div className="space-y-2 mt-1">
-            <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">请选择任务分类</p>
-            <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-3 mt-2">
+            <div className="grid grid-cols-2 gap-3">
               {categories.map(c => (
-                <button disabled={isDisabled} key={c} onClick={() => handleSelectCategory(catType, catDiff, c)} className="py-3 rounded-xl border border-gray-200 font-bold text-gray-700 bg-white active:bg-gray-50 text-sm disabled:opacity-50 disabled:cursor-not-allowed">{c}</button>
+                <button disabled={isDisabled} key={c} onClick={() => handleSelectCategory(catType, catDiff, c, catMedia)} className="py-4 rounded-2xl border-2 border-gray-100 font-black text-gray-700 bg-white text-sm hover:border-gray-200 active:bg-gray-50 disabled:opacity-50 transition-all">{c}</button>
               ))}
             </div>
-            <button disabled={isDisabled} onClick={() => handleBackToDifficulty(catType, catMediaType)} className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 mt-2 disabled:opacity-50 disabled:cursor-not-allowed">↩️ 返回上一层</button>
+            <button disabled={isDisabled} onClick={() => handleBackToDifficulty(catType, catMedia)} className="w-full py-2.5 text-[10px] font-black text-gray-400 uppercase tracking-widest disabled:opacity-50">↩️ 返回上一层</button>
           </div>
         );
       case 'task-report':
         const r = msg.payload;
         return (
-          <div className="bg-white p-5 rounded-2xl border-2 border-blue-100 shadow-xl w-full">
-            <div className="flex justify-between items-start mb-4">
-               <div>
-                  <h4 className="font-black text-blue-900 text-lg">任务报告</h4>
-                  <p className="text-[10px] text-gray-400 font-mono">{r.taskNumber}</p>
-               </div>
-               <div className="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded">COMPLETED</div>
+          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl w-full text-sm animate-in zoom-in-95 duration-500">
+            <h4 className="font-black text-gray-900 text-xl mb-4">任务报告</h4>
+            <div className="space-y-2.5 mb-6">
+              <div className="flex justify-between"><span className="text-gray-400 font-bold">用户名</span><span className="font-black text-gray-900">{r.username}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400 font-bold">任务ID</span><span className="font-mono text-gray-600">{r.taskNumber}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400 font-bold">任务类型</span><span className="font-black text-gray-900">{r.type}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400 font-bold">任务级别</span><span className="font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[10px]">{r.difficulty}</span></div>
+              {r.category && <div className="flex justify-between"><span className="text-gray-400 font-bold">分类</span><span className="font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[10px]">{r.category}</span></div>}
+              <div className="flex justify-between"><span className="text-gray-400 font-bold">开始时间</span><span className="font-mono text-xs">{new Date(r.startTime).toLocaleTimeString()}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400 font-bold">耗时</span><span className="font-black text-gray-900">{formatDuration(r.duration)}</span></div>
+              <div className="flex justify-between items-center border-t border-dashed pt-2 mt-2"><span className="text-gray-400 font-bold">准确率</span><span className="font-black text-lg text-emerald-600">{r.accuracy}</span></div>
             </div>
-            <div className="space-y-2 border-t border-b border-gray-100 py-3 mb-3 text-sm">
-              <div className="flex justify-between"><span className="text-gray-400">用户名</span><span className="font-bold">{r.username}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">任务ID</span><span className="font-mono text-xs">{r.taskNumber}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">任务类型</span><span className="font-bold">{r.type}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">任务级别</span><span className="font-bold">{r.difficulty}</span></div>
-              {r.category && <div className="flex justify-between"><span className="text-gray-400">采集任务分类</span><span className="font-bold">{r.category}</span></div>}
-              <div className="flex justify-between"><span className="text-gray-400">任务开始时间</span><span className="font-mono text-xs">{new Date(r.startTime).toLocaleTimeString()}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">任务耗时</span><span className="font-bold">{formatDuration(r.duration)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400">任务准确率</span><span className="font-bold text-green-600">{r.accuracy}</span></div>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-900 font-black text-xs">获得贡献度</span>
-              <span className="text-2xl font-black text-blue-600">+{r.score}</span>
+            <div className="flex justify-between items-center bg-blue-600 p-4 rounded-2xl text-white">
+              <span className="font-black text-xs uppercase tracking-widest opacity-80">获得贡献度</span>
+              <span className="text-3xl font-black">+{r.score}</span>
             </div>
           </div>
         );
@@ -347,39 +243,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
           const s = msg.payload;
           const isDaily = msg.type === 'daily-stats-report';
           return (
-            <div className="bg-white p-5 rounded-2xl border-2 border-gray-100 shadow-xl w-full text-gray-800">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h4 className="font-black text-gray-900 text-lg">{isDaily ? '我的日报统计' : '我的账户统计'}</h4>
-                  <p className="text-[10px] text-gray-400 font-mono">
-                    {new Date(s.reportTimestamp).toLocaleString('zh-CN')}
-                  </p>
-                </div>
-                <div className="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-1 rounded">{isDaily ? 'DAILY' : 'LIFETIME'}</div>
+            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl w-full text-gray-800 animate-in slide-in-from-right-4">
+              <h4 className="font-black text-gray-900 text-xl mb-1">{isDaily ? '今日统计' : '账户概览'}</h4>
+              <p className="text-[10px] text-gray-400 font-mono mb-4">{new Date(s.reportTimestamp).toLocaleString()}</p>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-gray-50 p-3 rounded-2xl"><p className="text-[9px] text-gray-400 font-black uppercase mb-1">总耗时</p><p className="font-black text-sm">{formatDuration(s.totalDuration)}</p></div>
+                  <div className="bg-blue-600 p-3 rounded-2xl text-white shadow-lg"><p className="text-[9px] text-blue-100 font-black uppercase mb-1">贡献度</p><p className="font-black text-sm">{s.totalScore || s.totalScore === 0 ? s.totalScore : (s.quickScore + s.collectionScore)}</p></div>
               </div>
-  
-              <div className="space-y-1 border-t border-b border-gray-100 py-3 mb-3 text-xs">
-                <div className="flex justify-between"><span className="text-gray-500">用户名</span><span className="font-bold">{s.username}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">用户ID</span><span className="font-mono text-[10px]">{s.userId}</span></div>
-              </div>
-  
-              <div className="grid grid-cols-3 gap-2 mb-4 text-center">
-                  <div className="bg-gray-50 p-2 rounded-lg">
-                      <p className="text-[9px] text-gray-500 uppercase font-bold">总耗时</p>
-                      <p className="font-bold text-sm text-gray-900">{formatDuration(s.totalDuration)}</p>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded-lg">
-                      <p className="text-[9px] text-gray-500 uppercase font-bold">准确率</p>
-                      <p className="font-bold text-sm text-green-600">
-                        {s.totalAttempted > 0 ? `${Math.round((s.totalCorrect / s.totalAttempted) * 100)}%` : 'N/A'}
-                      </p>
-                  </div>
-                  <div className="bg-blue-50 p-2 rounded-lg">
-                      <p className="text-[9px] text-blue-500 uppercase font-bold">{isDaily ? '今日贡献度' : '总贡献度'}</p>
-                      <p className="font-bold text-sm text-blue-700">{s.totalScore}</p>
-                  </div>
-              </div>
-              <StatsBreakdown stats={s} title={isDaily ? '今日' : ''} />
             </div>
           );
       default: return null;
@@ -387,45 +257,40 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center px-4 h-16">
+    <div className="flex flex-col h-full bg-[#F8FAFF]">
+      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 flex items-center px-4 h-16 shadow-sm">
         {!isTaskActive && (
-        <button onClick={onBack} className="p-2 -ml-2 text-gray-500 active:bg-gray-100 rounded-full transition-colors">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
-        </button>
+          <button onClick={onBack} className="p-2 -ml-2 text-gray-400">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
+          </button>
         )}
-        <div className={`flex flex-col ${!isTaskActive ? 'ml-2' : ''}`}>
-          <h2 className="text-lg font-black text-gray-900 leading-none">任务中心</h2>
-          <span className="text-[10px] font-bold text-emerald-500 uppercase mt-0.5 tracking-tighter">AI DATA NODE ACTIVE</span>
+        <div className="flex flex-col ml-2">
+          <h2 className="text-lg font-black text-gray-900">任务中心</h2>
+          <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Active</span>
         </div>
-        <div className="ml-auto flex items-center bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
-          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse mr-2"></span>
-          <span className="text-xs font-black text-blue-700">{stats.totalScore} PTS</span>
+        <div className="ml-auto bg-blue-600 px-4 py-1.5 rounded-full shadow-lg shadow-blue-100">
+          <span className="text-[11px] font-black text-white">{stats.totalScore} PTS</span>
         </div>
       </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {messages.map((msg, index) => (
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-20">
+        {messages.map((msg, idx) => (
           <div key={msg.id} className={`flex ${msg.sender === 'agent' ? 'justify-start' : 'justify-end'}`}>
-            <div className={`max-w-[85%] ${msg.sender === 'agent' 
-              ? msg.type === 'text' ? 'bg-white text-gray-800 rounded-2xl rounded-tl-sm shadow-sm border border-gray-100 p-4' : 'w-full'
-              : 'bg-blue-600 text-white rounded-2xl rounded-tr-sm shadow-md p-3.5'}`}>
-              {renderMessageContent(msg, index === messages.length - 1)}
-              <div className={`text-[8px] mt-1 font-bold uppercase tracking-widest opacity-30 ${msg.sender === 'user' ? 'text-right' : ''}`}>
-                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
+            <div className={`max-w-[85%] ${msg.sender === 'agent' ? msg.type === 'text' ? 'bg-white text-gray-800 rounded-3xl rounded-tl-sm shadow-md border border-gray-50 p-4' : 'w-full' : 'bg-blue-600 text-white rounded-3xl rounded-tr-sm shadow-xl p-4 font-black'}`}>
+              {renderMessageContent(msg, idx === messages.length - 1)}
             </div>
           </div>
         ))}
-
         {activeTask && (
-          <div className="mt-4">
+          <div className="mt-4 animate-in slide-in-from-bottom-8 duration-500">
             <TaskFlow 
-              type={activeTask.type} 
-              difficulty={activeTask.difficulty} 
-              category={activeTask.category}
-              onComplete={handleTaskComplete}
-              onCancel={() => { setActiveTask(null); addMessage("", 'agent', 'task-type-select'); }}
+              {...activeTask} 
+              onComplete={handleTaskComplete} 
+              onCancel={() => { 
+                setActiveTask(null); 
+                addMessage("已取消任务", 'user'); 
+                setTimeout(() => addMessage("", 'agent', 'task-type-select'), 500); 
+              }} 
             />
           </div>
         )}

@@ -1,9 +1,9 @@
 {
-  "name": "Web3 Task Center Agent - final version",
-  "description": "A decentralized task platform featuring AI-powered image verification, quick judgment tasks, and data collection missions.",
+  "name": "Web3 Task Center Agent",
+  "description": "A decentralized data collection and verification platform with email VIB binding.",
   "requestFramePermissions": [
     "camera",
-    "geolocation",
-    "microphone"
+    "microphone",
+    "geolocation"
   ]
 }
