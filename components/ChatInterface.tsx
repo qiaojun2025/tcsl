@@ -185,17 +185,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
 
       const nextItemIndex = index + 1;
       if (nextItemIndex >= 10) {
-        // 1. Confirmation message
+        // 1. Confirmation message immediately
         addMessage("您的答案已经提交，审核人员将校对您的答案。校对后，任务报告将在应用内通知", 'agent');
         
-        // 2. Clear UI immediately
+        // 2. Clear workflow state and show menu immediately
         setWorkflowState('IDLE');
-        
-        // 3. Re-show task menu immediately
-        setTimeout(() => addMessage({}, 'agent', 'task-type-select'), 800);
+        setTimeout(() => addMessage({}, 'agent', 'task-type-select'), 500);
         
         const endTime = Date.now();
-        // 4. Mandatory 10-second delay for notification banner
+        // 3. Mandatory 10-second delay for notification banner
         setTimeout(() => {
           onUpdateTaskCompletion(newTotalScore, TaskType.QUICK_JUDGMENT, Difficulty.EASY, {
             correctCount: newTotalCorrect,
@@ -352,12 +350,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
     // 1. Agent immediately outputs confirmation message
     addMessage("您的答案已经提交，审核人员将校对您的答案。校对后，任务报告将在应用内通知", 'agent');
     
-    // 2. Clear activeTask immediately (removes mask layer)
+    // 2. Clear task interface immediately (removes mask layer)
     const taskDetails = { ...activeTask };
     setActiveTask(null);
+    setWorkflowState('IDLE');
 
     // 3. Immediately show the main task selection menu back in the chat
-    setTimeout(() => addMessage({}, 'agent', 'task-type-select'), 800);
+    setTimeout(() => addMessage({}, 'agent', 'task-type-select'), 500);
 
     // 4. Mandatory 10-second delay for notification banner
     setTimeout(() => {
@@ -390,8 +389,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         setSessionStats(nextStats);
 
         if (nextLabels.length < targetCount) {
-          // If custom session not finished yet, this logic should be triggered faster than the banner
-          // but here the code manages specific multi-part custom tasks
           setTimeout(() => {
             addMessage(`请输入第 ${nextLabels.length + 1} 题自定义采集任务的标注内容，当前 ${nextLabels.length + 1}/${targetCount}。`, 'agent');
           }, 400);
@@ -427,7 +424,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
   const renderButtons = (msg: Message, isLast: boolean) => {
-    const disabled = isTaskActive || (workflowState !== 'IDLE' && msg.type !== 'emotion-options') || !isLast;
+    // Requirements: Hide all historical buttons during task execution.
+    // Also, buttons are only active on the latest message when idle.
+    if (isTaskActive) return null;
+    
+    const disabled = !isLast;
     const btnClass = "w-full py-4 rounded-2xl font-bold text-[15px] active:scale-[0.98] transition-all disabled:opacity-30 disabled:grayscale ";
     
     switch(msg.type) {
