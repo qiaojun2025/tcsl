@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Web3 Task Center Agent</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load TensorFlow.js and COCO-SSD for client-side image recognition -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <style>
@@ -55,7 +54,6 @@
             background: linear-gradient(135deg, #0891B2 0%, #22D3EE 100%);
         }
 
-        /* Safe areas for notched phones */
         .pb-safe {
             padding-bottom: env(safe-area-inset-bottom);
         }
@@ -66,6 +64,14 @@
 
         ::-webkit-scrollbar {
             display: none;
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
     </style>
 <script type="importmap">
