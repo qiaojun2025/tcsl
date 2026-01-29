@@ -25,7 +25,6 @@ const EMOTION_TEXTS = [
   "价格虽然贵一点，但质量确实没得说。"
 ];
 
-// Mock Ground Truth for validation
 const EMOTION_ANSWERS = [
   ['负面', '强', '包含'],
   ['正面', '强', '不包含'],
@@ -126,8 +125,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   const getEmotionPrompt = (subStep: number) => {
     const safeIndex = Math.min(Math.max(0, subStep), EMOTION_CONFIG.length - 1);
     const config = EMOTION_CONFIG[safeIndex];
-    const optionsText = config.options.map((opt, i) => `${i + 1}, ${opt}`).join('  ');
-    return `请选择【${config.label}】：\n${optionsText}\n(提示：回复数字或选项文字)`;
+    if (!config) return "请选择答案";
+    const optionsText = config.options.map((opt, i) => `${i + 1}. ${opt}`).join('  ');
+    return `请选择【${config.label}】：\n${optionsText}\n(提示：回复数字或选项名称，输入“退出”返回菜单)`;
   };
 
   const startEmotionTask = () => {
@@ -144,32 +144,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
   const processEmotionInput = (val: string) => {
+    const inputVal = val.trim();
+    if (inputVal === '退出' || inputVal === '返回' || inputVal === 'quit' || inputVal === 'exit') {
+      handleAction('GO_BACK', 'task-type-select');
+      return;
+    }
+
     const { index, subStep, currentAnswers } = emotionTaskState;
-    if (subStep >= EMOTION_CONFIG.length) return; // Safety guard
+    if (subStep >= EMOTION_CONFIG.length) return; 
     
     const config = EMOTION_CONFIG[subStep];
     let selectedOption = "";
 
-    const num = parseInt(val);
+    const num = parseInt(inputVal);
     if (!isNaN(num) && num >= 1 && num <= config.options.length) {
       selectedOption = config.options[num - 1];
     } else {
-      const found = config.options.find(opt => val.includes(opt));
+      const found = config.options.find(opt => inputVal.includes(opt));
       if (found) selectedOption = found;
     }
 
     if (!selectedOption) {
-      addMessage(`识别失败。请回复 1-${config.options.length} 之间的数字，或者直接输入选项内容。`, 'agent');
+      addMessage(`识别失败。请回复 1-${config.options.length} 之间的数字，或者直接输入选项内容。输入“退出”可中止任务。`, 'agent');
       return;
     }
 
     addMessage(selectedOption, 'user');
     const newAnswers = [...currentAnswers, selectedOption];
-    
     const nextStepIndex = subStep + 1;
 
     if (nextStepIndex >= EMOTION_CONFIG.length) {
-      // Validate item answers
       const truth = EMOTION_ANSWERS[index];
       const isItemCorrect = newAnswers.every((ans, i) => ans === truth[i]);
       
@@ -179,12 +183,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       
       setSessionStats({ score: currentTotalScore, correct: currentTotalCorrect });
 
-      // Feedback to user
       setTimeout(() => {
         if (isItemCorrect) {
-          addMessage(`✅ 恭喜！本条任务判别准确。贡献度 +10 PTS。当前累计：${currentTotalScore} PTS`, 'agent');
+          addMessage(`✅ 恭喜！判别准确。贡献度 +10 PTS。当前：${currentTotalScore} PTS`, 'agent');
         } else {
-          addMessage(`❌ 抱歉，本条任务判别与标准结果不符。本次不得分。`, 'agent');
+          addMessage(`❌ 判别与标准结果不符，本次不得分。`, 'agent');
         }
 
         const nextItemIndex = index + 1;
@@ -214,7 +217,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
           setEmotionTaskState({ index: 0, subStep: 0, currentAnswers: [] });
           setTimeout(() => addMessage({}, 'agent', 'task-type-select'), 1500);
         } else {
-          // Proceed to next item
           setEmotionTaskState({ index: nextItemIndex, subStep: 0, currentAnswers: [] });
           setTimeout(() => {
             const nextText = EMOTION_TEXTS[nextItemIndex];
@@ -226,7 +228,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         }
       }, 600);
     } else {
-      // Same item, next sub-step
       setEmotionTaskState({ index, subStep: nextStepIndex, currentAnswers: newAnswers });
       setTimeout(() => {
         addMessage(getEmotionPrompt(nextStepIndex), 'agent');
@@ -237,11 +238,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   const handleSendMessage = async () => {
     if (!userInput.trim() || isTyping) return;
     
-    // During active collection task or selection flows, handle input based on state
-    if (activeTask && !workflowState.includes('EMOTION')) {
-      // TaskFlow is handling its own UI, but chat input might still trigger
-      return; 
-    }
+    // Safety check: TaskFlow is active, chat input is secondary
+    if (activeTask && workflowState === 'IDLE') return;
 
     const val = userInput.trim();
     setUserInput('');
@@ -302,15 +300,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         config: { systemInstruction: "你是一个任务中心助手。帮助用户解答任务规则和状态。" }
       });
       setIsTyping(false);
-      addMessage(response.text || "抱歉，我无法理解您的指令。请使用功能按钮进行操作。", 'agent');
+      addMessage(response.text || "抱歉，我无法理解。请选择功能按钮操作。", 'agent');
     } catch (e) {
       setIsTyping(false);
-      addMessage("系统忙，请重试。", 'agent');
+      addMessage("系统繁忙，请重试。", 'agent');
     }
   };
 
   const handleAction = (type: string, data: any) => {
-    if (isTaskActive) return;
+    // Override isTaskActive for back navigation
+    if (isTaskActive && type !== 'GO_BACK') return;
     
     switch(type) {
       case 'SELECT_TYPE':
@@ -321,7 +320,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         const taskType = messages[messages.length-1].payload.taskType;
         addMessage(`文件类型：${data === 'IMAGE' ? '图片' : data === 'AUDIO' ? '音频' : data === 'VIDEO' ? '视频' : '文本'}`, 'user');
         if (taskType === TaskType.QUICK_JUDGMENT && data === 'TEXT') {
-           addMessage("准备开始情绪快判任务。我们将通过对话方式完成数据标注。", 'agent');
+           addMessage("准备开始情绪快判。通过对话进行标注，可随时输入“退出”中止。", 'agent');
         }
         setTimeout(() => addMessage({ taskType, mediaType: data }, 'agent', 'difficulty-select'), 400);
         break;
@@ -363,13 +362,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         });
         break;
       case 'GO_BACK':
-        addMessage("返回上一层", 'user');
-        if (workflowState !== 'IDLE') {
-          setWorkflowState('IDLE');
-          setTempConfig(null);
-          setCustomLabels([]);
-        }
-        setTimeout(() => addMessage({}, 'agent', data), 400);
+        addMessage("返回主菜单", 'user');
+        setWorkflowState('IDLE');
+        setTempConfig(null);
+        setCustomLabels([]);
+        setActiveTask(null);
+        setEmotionTaskState({ index: 0, subStep: 0, currentAnswers: [] });
+        setTimeout(() => {
+          addMessage("已退出当前任务流程。请重新选择：", 'agent');
+          addMessage({}, 'agent', 'task-type-select');
+        }, 400);
         break;
       case 'DAILY_REPORT':
         addMessage("【我的日报统计】", 'user');
@@ -556,7 +558,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   return (
     <div className="flex flex-col h-full bg-[#F8FAFF] relative">
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 flex items-center px-4 h-16 shadow-sm">
-        {!isTaskActive && workflowState === 'IDLE' && (
+        {!activeTask && workflowState === 'IDLE' && (
           <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
           </button>
@@ -598,11 +600,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
               onComplete={handleTaskComplete} 
               onCancel={() => { 
                 setActiveTask(null); 
-                addMessage("任务已退出。", 'agent'); 
+                addMessage("任务已退出流程。", 'agent'); 
                 if (workflowState === 'IDLE') {
                   setTimeout(() => addMessage({}, 'agent', 'task-type-select'), 800); 
                 } else {
-                   addMessage(`任务已退出。您可以继续输入或选择其他任务。`, 'agent');
+                   addMessage(`已中止。回复“继续”或重新选择。`, 'agent');
                 }
               }} 
             />
@@ -616,10 +618,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
           {workflowState !== 'IDLE' && (
             <div className="flex justify-end mb-2 px-1">
               <button 
-                onClick={() => handleAction('GO_BACK', 'media-type-select')}
+                onClick={() => handleAction('GO_BACK', 'task-type-select')}
                 className="flex items-center space-x-1.5 py-1.5 px-4 bg-white border-2 border-gray-100 rounded-full text-[11px] font-black text-blue-600 shadow-sm active:scale-95 transition-all"
               >
-                <span>↩️ 返回并重新选择</span>
+                <span>↩️ 退出并返回主菜单</span>
               </button>
             </div>
           )}
@@ -627,9 +629,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
             <input 
               type="text" 
               placeholder={
-                workflowState === 'AWAITING_CLASSIFICATION' ? "请输入本次采集任务的分类..." :
-                workflowState === 'AWAITING_LABELS' ? "请输入当前题目的标注内容..." :
-                workflowState === 'EMOTION_LOOP' ? "请输入 1, 2, 3 或文字..." :
+                workflowState === 'AWAITING_CLASSIFICATION' ? "请输入采集分类..." :
+                workflowState === 'AWAITING_LABELS' ? "请输入标注内容..." :
+                workflowState === 'EMOTION_LOOP' ? "回复 1, 2, 3 或输入“退出”..." :
                 "输入内容并发送..."
               } 
               className={`flex-1 px-4 py-3.5 ${workflowState !== 'IDLE' ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'} border rounded-2xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 transition-all`}
