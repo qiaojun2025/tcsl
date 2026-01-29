@@ -37,7 +37,6 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
   const [currentTask, setCurrentTask] = useState<any>(null);
   const [taskQueue, setTaskQueue] = useState<any[]>([]);
   
-  // 规则：非自定义分类显示预览
   const [showPreview, setShowPreview] = useState(isCollection && !isCustom);
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'skipped' | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -62,7 +61,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
         id: i,
         prompt: pool[i] || pool[0],
         requirement: mediaType === 'VIDEO' 
-          ? '请录制5-15秒的视频。保持相机稳定，主体清晰。' 
+          ? '请录制5-10秒视频。保持相机稳定，主体清晰。' 
           : mediaType === 'AUDIO' 
           ? '请在安静环境下录制清晰语音。文件不得超过 2MB。'
           : '确保采集主体居中，光线良好。系统将自动校验图片重复度。'
@@ -77,7 +76,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
     setMediaBlob(null);
     setHasCaptured(false);
     const item = queue[idx];
-    if (type === TaskType.QUICK_JUDGMENT) {
+    if (type === TaskType.QUICK_JUDGMENT && mediaType === 'IMAGE') {
       const target = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
       setCurrentTask({ imageUrl: getPlaceholderImage(target), target });
     } else {
@@ -127,7 +126,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
       recorder.start();
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
-    } catch (e) { alert('权限请求失败，请检查摄像头/麦克风设置。'); }
+    } catch (e) { alert('权限请求失败，请检查设置。'); }
   };
 
   const stopRecording = () => {
@@ -138,12 +137,12 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
 
   const validateAndSubmit = async () => {
     if (mediaType === 'AUDIO' && mediaBlob && mediaBlob.size > 2 * 1024 * 1024) {
-      alert('语音文件大小超过 2MB，请缩短录制时长后重试。');
+      alert('语音文件超过 2MB，请重新录制。');
       return;
     }
     if (mediaType === 'IMAGE') {
       if (Math.random() < 0.05) {
-        alert('校验结果：检测到图片重复，请尝试拍摄不同的物体或角度。');
+        alert('校验结果：检测到图片重复，请拍摄一个更独特的视角。');
         setHasCaptured(false);
         return;
       }
@@ -154,20 +153,18 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
   if (showPreview) {
     return (
       <div className="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-gray-100 animate-in zoom-in-95 duration-500 max-h-[85vh]">
-        {/* 标题区域 */}
         <div className="bg-blue-600 p-6 text-white shrink-0 shadow-lg">
-          <h2 className="text-2xl font-black mb-1">{category || "采集任务"}</h2>
+          <h2 className="text-2xl font-black mb-1">{category || "任务预览"}</h2>
           <p className="text-blue-100 text-[11px] font-bold opacity-90 leading-relaxed tracking-wider uppercase">
-            完成此项数据采集可以提升您的 VIB 账户权重。
+            参与此项数据贡献可以提升您的报酬结算比例。
           </p>
         </div>
         
-        {/* 任务标签区域 */}
         <div className="p-6 space-y-6 flex-1 overflow-y-auto bg-white">
           <div>
             <div className="flex items-center space-x-2 mb-3">
               <span className="w-1.5 h-4 bg-blue-600 rounded-full"></span>
-              <span className="text-[11px] font-black text-gray-900 uppercase tracking-widest">待采集目标 ({taskQueue.length}项)</span>
+              <span className="text-[11px] font-black text-gray-900 uppercase tracking-widest">任务标签 ({taskQueue.length}项)</span>
             </div>
             <div className="bg-gray-50 rounded-2xl p-4 space-y-2.5 border border-gray-100 shadow-inner">
               {taskQueue.map((t, idx) => (
@@ -179,7 +176,6 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
             </div>
           </div>
 
-          {/* 任务要求区域 */}
           <div>
             <div className="flex items-center space-x-2 mb-3">
               <span className="w-1.5 h-4 bg-amber-500 rounded-full"></span>
@@ -191,12 +187,11 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
           </div>
         </div>
 
-        {/* 按钮区域 */}
         <div className="p-6 bg-gray-50/50 border-t border-gray-100 shrink-0">
-          <p className="text-[9px] text-gray-400 text-center mb-4 uppercase font-black tracking-widest">开始执行本轮任务</p>
+          <p className="text-[9px] text-gray-400 text-center mb-4 uppercase font-black tracking-widest">确认开始执行采集任务</p>
           <div className="grid grid-cols-2 gap-4">
-            <button onClick={onCancel} className="py-4 rounded-2xl bg-white border border-gray-200 text-gray-600 font-black active:bg-gray-50 transition-colors">退出</button>
-            <button onClick={() => setShowPreview(false)} className="py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-100 active:scale-95 transition-all">确认开始</button>
+            <button onClick={onCancel} className="py-4 rounded-2xl bg-white border border-gray-200 text-gray-600 font-black active:bg-gray-50 transition-colors">取消退出</button>
+            <button onClick={() => setShowPreview(false)} className="py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-100 active:scale-95 transition-all">立即开始</button>
           </div>
         </div>
       </div>
@@ -214,9 +209,9 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
 
       <div className="mb-6">
         <h3 className="text-xl font-black text-gray-900 leading-tight mb-1">
-          {type === TaskType.QUICK_JUDGMENT ? `图中是否包含 ${currentTask?.target || "目标"}?` : `当前目标：${currentTask?.prompt || "加载中"}`}
+          {type === TaskType.QUICK_JUDGMENT ? `图中是否包含 ${currentTask?.target}?` : `当前目标：${currentTask?.prompt}`}
         </h3>
-        <p className="text-[10px] text-gray-400 font-bold leading-relaxed">{currentTask?.requirement || ""}</p>
+        <p className="text-[10px] text-gray-400 font-bold leading-relaxed">{currentTask?.requirement}</p>
       </div>
 
       <div className="mt-4 min-h-[260px] flex flex-col items-center justify-center bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 overflow-hidden relative shadow-inner">
@@ -270,7 +265,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
           <div className="bg-white/20 p-4 rounded-full mb-4">
              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d={feedback === 'correct' ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12"} /></svg>
           </div>
-          <p className="text-white font-black text-2xl uppercase tracking-[0.2em]">{feedback === 'correct' ? '数据有效' : '采集无效'}</p>
+          <p className="text-white font-black text-2xl uppercase tracking-[0.2em]">{feedback === 'correct' ? '数据通过' : '采集无效'}</p>
         </div>
       )}
     </div>

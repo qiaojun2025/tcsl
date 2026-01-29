@@ -18,10 +18,11 @@ export enum CollectionCategory {
   LIFE = '生活类',
   AUDIO = '音频类',
   VIDEO = '视频类',
-  CUSTOM = '自定义分类'
+  CUSTOM = '自定义分类',
+  EMOTION = '情绪快判'
 }
 
-export type MediaType = 'IMAGE' | 'AUDIO' | 'VIDEO';
+export type MediaType = 'IMAGE' | 'AUDIO' | 'VIDEO' | 'TEXT';
 
 export interface TaskCompletionRecord {
   id: string;
