@@ -73,7 +73,7 @@ const Typewriter = memo(({ text, onComplete }: { text: string, onComplete?: () =
     return () => clearInterval(timer);
   }, [text, onComplete]);
 
-  return <div className="whitespace-pre-wrap leading-relaxed font-semibold text-gray-800">{displayedText}</div>;
+  return <div className="whitespace-pre-wrap leading-relaxed font-semibold text-white/90">{displayedText}</div>;
 });
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBack, onUpdateTaskCompletion }) => {
@@ -238,7 +238,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   const handleSendMessage = async () => {
     if (!userInput.trim() || isTyping) return;
     
-    // Safety check: TaskFlow is active, chat input is secondary
     if (activeTask && workflowState === 'IDLE') return;
 
     const val = userInput.trim();
@@ -308,7 +307,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
   const handleAction = (type: string, data: any) => {
-    // Override isTaskActive for back navigation
     if (isTaskActive && type !== 'GO_BACK') return;
     
     switch(type) {
@@ -466,76 +464,72 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
 
   const renderButtons = (msg: Message, isLast: boolean) => {
     const disabled = isTaskActive || (workflowState !== 'IDLE') || !isLast;
-    const btnClass = "w-full py-3.5 rounded-2xl font-black text-sm active:scale-95 transition-all disabled:opacity-40 disabled:grayscale ";
+    const btnClass = "w-full py-4 rounded-2xl font-bold text-[15px] active:scale-[0.98] transition-all disabled:opacity-40 disabled:grayscale ";
     
     switch(msg.type) {
       case 'task-type-select': return (
-        <div className="space-y-3 mt-2">
-          <button disabled={disabled} onClick={() => handleAction('SELECT_TYPE', TaskType.QUICK_JUDGMENT)} className={btnClass + "bg-blue-600 text-white shadow-lg shadow-blue-100"}>【快判任务】</button>
-          <button disabled={disabled} onClick={() => handleAction('SELECT_TYPE', TaskType.COLLECTION)} className={btnClass + "bg-emerald-600 text-white shadow-lg shadow-emerald-100"}>【采集任务】</button>
-          <button disabled={disabled} onClick={() => handleAction('DAILY_REPORT', null)} className={btnClass + "bg-indigo-500 text-white"}>【我的日报统计】</button>
-          <button disabled={disabled} onClick={() => handleAction('ACCOUNT_STATS', null)} className={btnClass + "bg-slate-700 text-white"}>【我的账户统计】</button>
+        <div className="space-y-3 mt-3">
+          <button disabled={disabled} onClick={() => handleAction('SELECT_TYPE', TaskType.QUICK_JUDGMENT)} className={btnClass + "bg-[#1A4BD3] text-white shadow-lg shadow-blue-500/10"}>快判任务</button>
+          <button disabled={disabled} onClick={() => handleAction('SELECT_TYPE', TaskType.COLLECTION)} className={btnClass + "bg-[#161618] text-white border border-white/10"}>采集任务</button>
+          <button disabled={disabled} onClick={() => handleAction('DAILY_REPORT', null)} className={btnClass + "bg-[#161618] text-white/70 border border-white/10"}>我的日报统计</button>
+          <button disabled={disabled} onClick={() => handleAction('ACCOUNT_STATS', null)} className={btnClass + "bg-[#161618] text-white/70 border border-white/10"}>我的账户统计</button>
         </div>
       );
       case 'media-type-select': 
         const isQuick = msg.payload.taskType === TaskType.QUICK_JUDGMENT;
         return (
-          <div className="space-y-2 mt-2">
+          <div className="space-y-3 mt-3">
             {isQuick ? (
               <>
-                <button disabled={disabled} onClick={() => handleAction('SELECT_MEDIA', 'IMAGE')} className={btnClass + "bg-white border-2 border-gray-100 text-gray-700"}>图片</button>
-                <button disabled={disabled} onClick={() => handleAction('SELECT_MEDIA', 'TEXT')} className={btnClass + "bg-white border-2 border-gray-100 text-gray-700"}>文本</button>
+                <button disabled={disabled} onClick={() => handleAction('SELECT_MEDIA', 'IMAGE')} className={btnClass + "bg-[#161618] border border-white/10 text-white"}>图片</button>
+                <button disabled={disabled} onClick={() => handleAction('SELECT_MEDIA', 'TEXT')} className={btnClass + "bg-[#161618] border border-white/10 text-white"}>文本</button>
               </>
             ) : (
               ['IMAGE', 'AUDIO', 'VIDEO'].map(t => (
-                <button key={t} disabled={disabled} onClick={() => handleAction('SELECT_MEDIA', t)} className={btnClass + "bg-white border-2 border-gray-100 text-gray-700"}>{t === 'IMAGE' ? '图片' : t === 'AUDIO' ? '音频' : '视频'}</button>
+                <button key={t} disabled={disabled} onClick={() => handleAction('SELECT_MEDIA', t)} className={btnClass + "bg-[#161618] border border-white/10 text-white"}>{t === 'IMAGE' ? '图片' : t === 'AUDIO' ? '音频' : '视频'}</button>
               ))
             )}
-            <button disabled={disabled} onClick={() => handleAction('GO_BACK', 'task-type-select')} className="w-full py-2 text-xs font-black text-gray-400 uppercase tracking-widest mt-2">↩️ 返回上一层</button>
+            <button disabled={disabled} onClick={() => handleAction('GO_BACK', 'task-type-select')} className="w-full py-2 text-xs font-bold text-gray-500 uppercase tracking-widest mt-2">↩️ 返回</button>
           </div>
         );
       case 'difficulty-select':
         const media = msg.payload.mediaType;
         const isEmotion = msg.payload.taskType === TaskType.QUICK_JUDGMENT && media === 'TEXT';
         return (
-          <div className="space-y-2 mt-2">
+          <div className="space-y-3 mt-3">
             {isEmotion ? (
-              <button disabled={disabled} onClick={() => handleAction('SELECT_DIFFICULTY', Difficulty.EASY)} className={btnClass + "bg-white border-2 border-blue-50 text-blue-600"}>{Difficulty.EASY}</button>
+              <button disabled={disabled} onClick={() => handleAction('SELECT_DIFFICULTY', Difficulty.EASY)} className={btnClass + "bg-[#161618] border border-[#1A4BD3] text-[#3E8BFF]"}>{Difficulty.EASY}</button>
             ) : (
               [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD, '自定义'].filter(d => msg.payload.taskType === TaskType.COLLECTION || d !== '自定义').map(d => (
-                <button key={d} disabled={disabled} onClick={() => handleAction('SELECT_DIFFICULTY', d)} className={btnClass + "bg-white border-2 border-blue-50 text-blue-600"}>{d}</button>
+                <button key={d} disabled={disabled} onClick={() => handleAction('SELECT_DIFFICULTY', d)} className={btnClass + "bg-[#161618] border border-white/10 text-white"}>{d}</button>
               ))
             )}
-            <button disabled={disabled} onClick={() => handleAction('GO_BACK', 'media-type-select')} className="w-full py-2 text-xs font-black text-gray-400 uppercase tracking-widest mt-2">↩️ 返回上一层</button>
+            <button disabled={disabled} onClick={() => handleAction('GO_BACK', 'media-type-select')} className="w-full py-2 text-xs font-bold text-gray-500 uppercase tracking-widest mt-2">↩️ 返回</button>
           </div>
         );
       case 'category-select': return (
-        <div className="grid grid-cols-2 gap-3 mt-2">
+        <div className="grid grid-cols-2 gap-3 mt-3">
           {(msg.payload.mediaType === 'AUDIO' ? [CollectionCategory.AUDIO] : 
             msg.payload.mediaType === 'VIDEO' ? [CollectionCategory.VIDEO] : 
             [CollectionCategory.ANIMAL, CollectionCategory.PLANT, CollectionCategory.PERSON, CollectionCategory.STREET, CollectionCategory.LIFE]).map(c => (
-            <button key={c} disabled={disabled} onClick={() => handleAction('SELECT_CATEGORY', c)} className={btnClass + "bg-white border-2 border-gray-100 text-gray-700 text-xs"}>{c}</button>
+            <button key={c} disabled={disabled} onClick={() => handleAction('SELECT_CATEGORY', c)} className={btnClass + "bg-[#161618] border border-white/10 text-white text-xs"}>{c}</button>
           ))}
-          <button disabled={disabled} onClick={() => handleAction('GO_BACK', 'difficulty-select')} className="col-span-2 py-2 text-xs font-black text-gray-400 uppercase tracking-widest">↩️ 返回上一层</button>
+          <button disabled={disabled} onClick={() => handleAction('GO_BACK', 'difficulty-select')} className="col-span-2 py-2 text-xs font-bold text-gray-500 uppercase tracking-widest">↩️ 返回</button>
         </div>
       );
       case 'task-report':
         const r = msg.payload;
         return (
-          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-xl w-full text-sm animate-in zoom-in duration-300">
-            <h4 className="font-black text-gray-900 text-xl mb-4 text-center border-b pb-2">任务报告</h4>
-            <div className="space-y-2.5 mb-6">
-              <div className="flex justify-between"><span className="text-gray-400 font-bold">用户名</span><span className="font-black">{r.username}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400 font-bold">任务ID</span><span className="font-mono">{r.taskNumber}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400 font-bold">任务类型</span><span className="font-black">{r.type}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400 font-bold">任务级别</span><span className="font-black text-blue-600">{r.difficulty}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400 font-bold">开始时间</span><span className="font-black text-gray-600">{new Date(r.startTime).toLocaleTimeString()}</span></div>
-              <div className="flex justify-between"><span className="text-gray-400 font-bold">任务耗时</span><span className="font-black text-indigo-600">{r.duration}s</span></div>
-              <div className="flex justify-between"><span className="text-gray-400 font-bold">任务准确率</span><span className="font-black text-lg text-emerald-600">{r.accuracy}</span></div>
-              {r.category && <div className="flex justify-between"><span className="text-gray-400 font-bold">任务分类</span><span className="font-black text-amber-600">{r.category}</span></div>}
+          <div className="ios-card p-6 w-full text-sm animate-in zoom-in duration-300">
+            <h4 className="font-bold text-white text-lg mb-4 text-center border-b border-white/5 pb-2">任务报告</h4>
+            <div className="space-y-3 mb-6">
+              <div className="flex justify-between"><span className="text-gray-400">用户名</span><span className="font-bold">{r.username}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">任务ID</span><span className="font-mono text-xs">{r.taskNumber}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">类型</span><span className="font-bold">{r.type}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">正确率</span><span className="font-bold text-[#10B981]">{r.accuracy}</span></div>
             </div>
-            <div className="bg-blue-600 p-4 rounded-2xl text-white text-center shadow-lg">
-              <span className="text-2xl font-black">+{r.score} PTS</span>
+            <div className="bg-[#1A4BD3] p-4 rounded-2xl text-white text-center shadow-lg">
+              <span className="text-xl font-bold">+{r.score} PTS</span>
             </div>
           </div>
         );
@@ -543,11 +537,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       case 'account-stats-report':
           const s = msg.payload;
           return (
-            <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-xl w-full">
-              <h4 className="font-black text-gray-900 text-lg mb-3">{msg.type === 'daily-stats-report' ? '今日统计' : '账户概览'}</h4>
+            <div className="ios-card p-5 w-full">
+              <h4 className="font-bold text-white text-[16px] mb-4">{msg.type === 'daily-stats-report' ? '今日统计' : '账户概览'}</h4>
               <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-gray-50 p-3 rounded-2xl"><p className="text-[9px] text-gray-400 font-black mb-1 uppercase">总耗时</p><p className="font-black text-sm">{s.totalDuration}s</p></div>
-                  <div className="bg-blue-600 p-3 rounded-2xl text-white shadow-md"><p className="text-[9px] text-blue-100 font-black mb-1 uppercase">贡献度</p><p className="font-black text-sm">{s.totalScore.toLocaleString()} PTS</p></div>
+                  <div className="bg-[#1C1C1E] p-4 rounded-2xl border border-white/5"><p className="text-[10px] text-gray-500 font-bold mb-1 uppercase tracking-wider">总耗时</p><p className="font-bold text-white">{s.totalDuration}s</p></div>
+                  <div className="bg-[#1A4BD3] p-4 rounded-2xl text-white shadow-md"><p className="text-[10px] text-white/60 font-bold mb-1 uppercase tracking-wider">总奖励</p><p className="font-bold text-white">{s.totalScore.toLocaleString()} PTS</p></div>
               </div>
             </div>
           );
@@ -556,28 +550,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F8FAFF] relative">
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 flex items-center px-4 h-16 shadow-sm">
-        {!activeTask && workflowState === 'IDLE' && (
-          <button onClick={onBack} className="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
-          </button>
-        )}
-        <div className="flex flex-col ml-2">
-          <h2 className="text-lg font-black text-gray-900 tracking-tight">任务中心 Agent</h2>
-          <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">Online</span>
+    <div className="flex flex-col h-full bg-[#0A0A0A] relative pt-safe">
+      {/* Header */}
+      <div className="sticky top-0 z-50 ios-blur border-b border-white/5 flex items-center px-6 h-16">
+        <button onClick={onBack} className="p-2 -ml-2 text-white/70 hover:text-white transition-colors">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
+        </button>
+        <div className="flex flex-col ml-3">
+          <h2 className="text-[16px] font-bold text-white tracking-tight">AI 标注</h2>
+          <span className="text-[10px] font-bold text-[#10B981] uppercase tracking-widest flex items-center">
+            <span className="w-1 h-1 bg-[#10B981] rounded-full mr-1.5 animate-pulse"></span> Online
+          </span>
         </div>
-        <div className="ml-auto bg-blue-600 px-4 py-1.5 rounded-full shadow-lg">
-          <span className="text-[11px] font-black text-white">{stats.totalScore.toLocaleString()} PTS</span>
+        <div className="ml-auto bg-[#1A4BD3] px-3 py-1 rounded-full">
+          <span className="text-[12px] font-bold text-white">{stats.totalScore.toLocaleString()} PTS</span>
         </div>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-28">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
         {messages.map((msg, idx) => (
           <div key={msg.id} className={`flex ${msg.sender === 'agent' ? 'justify-start' : 'justify-end'}`}>
-            <div className={`max-w-[85%] ${msg.sender === 'agent' ? (msg.type === 'text') ? 'bg-white text-gray-800 rounded-3xl rounded-tl-sm shadow-md border border-gray-50 p-4' : 'w-full' : 'bg-blue-600 text-white rounded-3xl rounded-tr-sm shadow-xl p-4 font-black'}`}>
+            <div className={`max-w-[85%] ${msg.sender === 'agent' ? (msg.type === 'text') ? 'bg-[#1C1C1E] text-white rounded-[20px] rounded-tl-none border border-white/5 p-4' : 'w-full' : 'bg-[#1A4BD3] text-white rounded-[20px] rounded-tr-none shadow-xl p-4 font-semibold'}`}>
               {msg.type === 'text' && msg.sender === 'agent' && idx === messages.length - 1 ? <Typewriter text={msg.payload} /> : 
-               msg.type === 'text' ? <div className="whitespace-pre-wrap leading-relaxed font-semibold text-gray-800">{msg.payload}</div> : null}
+               msg.type === 'text' ? <div className="whitespace-pre-wrap leading-relaxed font-semibold">{msg.payload}</div> : null}
               {renderButtons(msg, idx === messages.length - 1)}
             </div>
           </div>
@@ -585,10 +580,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
 
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100 flex space-x-1">
-              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
-              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'0.2s'}}></div>
-              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{animationDelay:'0.4s'}}></div>
+            <div className="bg-[#1C1C1E] rounded-full px-4 py-3 border border-white/5 flex space-x-1">
+              <div className="w-1 h-1 bg-white/40 rounded-full animate-bounce"></div>
+              <div className="w-1 h-1 bg-white/40 rounded-full animate-bounce" style={{animationDelay:'0.2s'}}></div>
+              <div className="w-1 h-1 bg-white/40 rounded-full animate-bounce" style={{animationDelay:'0.4s'}}></div>
             </div>
           </div>
         )}
@@ -603,8 +598,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
                 addMessage("任务已退出流程。", 'agent'); 
                 if (workflowState === 'IDLE') {
                   setTimeout(() => addMessage({}, 'agent', 'task-type-select'), 800); 
-                } else {
-                   addMessage(`已中止。回复“继续”或重新选择。`, 'agent');
                 }
               }} 
             />
@@ -614,37 +607,41 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       </div>
 
       {!activeTask && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t border-gray-100 flex flex-col">
+        <div className="absolute bottom-0 left-0 right-0 p-4 pb-safe ios-blur border-t border-white/5 flex flex-col">
           {workflowState !== 'IDLE' && (
-            <div className="flex justify-end mb-2 px-1">
+            <div className="flex justify-end mb-3 px-1">
               <button 
                 onClick={() => handleAction('GO_BACK', 'task-type-select')}
-                className="flex items-center space-x-1.5 py-1.5 px-4 bg-white border-2 border-gray-100 rounded-full text-[11px] font-black text-blue-600 shadow-sm active:scale-95 transition-all"
+                className="flex items-center space-x-1.5 py-1.5 px-4 bg-white/5 border border-white/10 rounded-full text-[11px] font-bold text-[#3E8BFF] active:scale-95 transition-all"
               >
                 <span>↩️ 退出并返回主菜单</span>
               </button>
             </div>
           )}
-          <div className="flex space-x-2">
-            <input 
-              type="text" 
-              placeholder={
-                workflowState === 'AWAITING_CLASSIFICATION' ? "请输入采集分类..." :
-                workflowState === 'AWAITING_LABELS' ? "请输入标注内容..." :
-                workflowState === 'EMOTION_LOOP' ? "回复 1, 2, 3 或输入“退出”..." :
-                "输入内容并发送..."
-              } 
-              className={`flex-1 px-4 py-3.5 ${workflowState !== 'IDLE' ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'} border rounded-2xl text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500 transition-all`}
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            />
+          <div className="flex space-x-3 items-center">
+            <div className="flex-1 relative">
+                <input 
+                  type="text" 
+                  placeholder={
+                    workflowState === 'AWAITING_CLASSIFICATION' ? "输入采集分类..." :
+                    workflowState === 'AWAITING_LABELS' ? "输入标注内容..." :
+                    workflowState === 'EMOTION_LOOP' ? "输入 1, 2, 3 或“退出”..." :
+                    "输入内容..."
+                  } 
+                  className="w-full bg-white/5 border border-white/10 rounded-full px-6 py-4 text-[15px] font-medium text-white outline-none focus:bg-white/10 focus:border-blue-500/50 transition-all placeholder:text-white/20"
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                />
+            </div>
             <button 
               onClick={handleSendMessage}
               disabled={!userInput.trim() || isTyping}
-              className={`w-14 h-14 ${workflowState !== 'IDLE' ? 'bg-blue-600 animate-pulse' : 'bg-blue-600'} rounded-2xl flex items-center justify-center text-white shadow-lg active:scale-95 transition-all disabled:opacity-50`}
+              className={`w-14 h-14 ${workflowState !== 'IDLE' ? 'bg-[#10B981]' : 'bg-[#1A4BD3]'} rounded-full flex items-center justify-center text-white shadow-lg active:scale-95 transition-all disabled:opacity-20`}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M14 5L21 12M21 12L14 19M21 12H3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </button>
           </div>
         </div>
