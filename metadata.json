@@ -1,9 +1,8 @@
 {
-  "name": "Web3 Task Center Agent 0129",
-  "description": "A decentralized data collection and verification platform with email VIB binding.",
+  "name": "Web3 Task Center Agent",
+  "description": "A conversational data annotation agent platform with AI-driven task management.",
   "requestFramePermissions": [
     "camera",
-    "microphone",
-    "geolocation"
+    "microphone"
   ]
 }

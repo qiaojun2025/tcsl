@@ -8,273 +8,177 @@ interface TaskFlowProps {
   category?: CollectionCategory;
   difficulty: Difficulty | string;
   mediaType?: MediaType;
-  prompt?: string;
-  totalTasks?: number;
-  currentIndex?: number;
+  labels?: string[];
   onComplete: (score: number, type: TaskType, performance: { correctCount: number; totalCount: number; startTime: number; endTime: number }) => void;
   onCancel: () => void;
 }
 
-const PREDEFINED_POOL: any = {
-  [CollectionCategory.ANIMAL]: ['森林中的小鹿', '草地上的柯基', '飞翔的海鸥', '午睡的橘猫', '觅食的松鼠', '花间的蝴蝶', '勤劳的蜜蜂', '吃草的小兔', '枝头的麻雀', '池塘里的金鱼'],
-  [CollectionCategory.PLANT]: ['盛开的红玫瑰', '向阳的葵花', '多肉石莲花', '沙漠仙人掌', '火红的枫叶', '挺拔的青松', '路边的野花', '盛放的荷花', '金黄的银杏', '垂挂的绿萝'],
-  [CollectionCategory.PERSON]: ['开心的笑脸', 'OK手势', '在公园跑步', '在电脑前办公', '夕阳下的背影', '跳跃的人影', '热情的挥手', '认真读书', '安静沉思', '低头看手机'],
-  [CollectionCategory.STREET]: ['禁停路标', '复古路灯', '红色消火栓', '木质长椅', '分类垃圾桶', '霓虹灯招牌', '斑马线行人', '等待红绿灯', '路边单车', '道路中心护栏'],
-  [CollectionCategory.LIFE]: ['透明玻璃杯', '机械键盘特写', '无线鼠标', '暖色调台灯', '合上的书本', '一把古铜钥匙', '入耳式耳机', '白色数据线', '电脑显示器', '移动电源'],
-  [CollectionCategory.AUDIO]: ['朗读数字1-10', '天气预报播报', '模拟雨声', '键盘敲击声', '翻书的声音', '门铃叮咚声', '水滴滴答声', '闹钟走时声', '热烈的掌声', '办公室背景杂音'],
-  [CollectionCategory.VIDEO]: ['在安全路面上保持直线正常行走拍摄']
+const MISSION_POOL: any = {
+  [CollectionCategory.ANIMAL]: ['森林里的梅花鹿', '草地上的金毛犬', '树枝上的小鸟', '草丛里的野兔', '水中嬉戏的天鹅', '午睡的大熊猫', '奔跑的骏马', '树上的松鼠', '草原上的狮子', '深海里的鲸鱼'],
+  [CollectionCategory.PLANT]: ['路边的蒲公英', '娇艳的郁金香', '挺拔的翠竹', '多肉植物特写', '秋天的银杏叶', '盛开的荷花', '沙漠中的仙人掌', '合欢树花', '清晨的牵牛花', '成熟的麦穗'],
+  [CollectionCategory.PERSON]: ['微笑的职员', '专注的背影', '热情的挥手', '奔跑的运动员', '阅读的少年', '跳跃的姿势', '思考的侧脸', '远眺的眼神', '忙碌的双手', 'OK手势'],
+  [CollectionCategory.STREET]: ['十字路口的红绿灯', '黄色的消火栓', '蓝色的共享单车', '路边的垃圾桶', '街角的长椅', '禁停交通标志', '霓虹灯招牌', '涂鸦墙面', '雨后的水洼', '路边报刊亭'],
+  [CollectionCategory.LIFE]: ['咖啡杯特写', '打开的记事本', '整洁的书桌', '窗台上的小绿植', '合上的笔记本电脑', '一串车钥匙', '木质餐具', '温暖的台灯', '墙上的装饰画', '无线耳机'],
+  [CollectionCategory.AUDIO]: ['环境背景音', '键盘敲击声', '翻书声', '滴水声', '远处鸟鸣', '汽车经过声', '清脆掌声', '拉链声', '咳嗽声', '敲门声'],
+  [CollectionCategory.VIDEO]: ['一段人物行走视频']
 };
 
-const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaType, prompt, totalTasks = 10, currentIndex = 0, onComplete, onCancel }) => {
-  const isCustom = category === CollectionCategory.CUSTOM;
-  const isCollection = type === TaskType.COLLECTION;
-  
+const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaType, onComplete, onCancel }) => {
+  const totalItems = 10;
   const [step, setStep] = useState(1);
-  const [currentTotal] = useState(totalTasks);
-  const [score, setScore] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [startTime] = useState(Date.now());
   const [currentTask, setCurrentTask] = useState<any>(null);
   const [taskQueue, setTaskQueue] = useState<any[]>([]);
-  
-  const [showPreview, setShowPreview] = useState(isCollection && !isCustom);
-  const [feedback, setFeedback] = useState<'correct' | 'wrong' | 'skipped' | null>(null);
+  const [hasCaptured, setHasCaptured] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [mediaBlob, setMediaBlob] = useState<Blob | null>(null);
-  const [hasCaptured, setHasCaptured] = useState(false);
-  
-  // Simulated image duplication check state
-  const capturedFingerprints = useRef<Set<string>>(new Set());
-  
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     const queue = [];
-    let pool: string[] = [];
-    
-    if (isCustom) {
-      pool = [prompt || '待采集'];
-    } else {
-      pool = PREDEFINED_POOL[category!] || ['待采集'];
-    }
-    
-    for (let i = 0; i < currentTotal; i++) {
-      queue.push({
-        id: i,
-        prompt: pool[i] || pool[0],
-        requirement: mediaType === 'VIDEO' 
-          ? '请录制5-10秒视频。保持相机稳定，主体清晰。' 
-          : mediaType === 'AUDIO' 
-          ? '请在安静环境下录制清晰语音。文件不得超过 2MB。'
-          : '确保采集主体居中，光线良好。系统将自动校验图片重复度。'
+    const pool = MISSION_POOL[category!] || ['默认目标'];
+    for (let i = 0; i < totalItems; i++) {
+      queue.push({ 
+        id: i, 
+        prompt: pool[i % pool.length], 
+        requirement: type === TaskType.QUICK_JUDGMENT ? '请快速判断图中内容' : '请根据描述进行采集' 
       });
     }
     setTaskQueue(queue);
-    generateCurrentTask(0, queue);
-  }, [type, category, mediaType, prompt, currentTotal, isCustom]);
+    generateTask(0, queue);
+  }, [type, category, mediaType, difficulty]);
 
-  const generateCurrentTask = (idx: number, queue: any[]) => {
-    setFeedback(null);
+  const generateTask = (idx: number, queue: any[]) => {
+    setHasCaptured(false); 
     setMediaBlob(null);
-    setHasCaptured(false);
     const item = queue[idx];
     if (type === TaskType.QUICK_JUDGMENT && mediaType === 'IMAGE') {
       const target = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
-      setCurrentTask({ imageUrl: getPlaceholderImage(target), target });
+      setCurrentTask({ ...item, imageUrl: getPlaceholderImage(target), target });
     } else {
       setCurrentTask(item);
     }
   };
 
-  const handleNext = (isCorrect: boolean | 'skipped') => {
-    const isActuallyCorrect = isCorrect === true;
-    setFeedback(isActuallyCorrect ? 'correct' : isCorrect === 'skipped' ? 'skipped' : 'wrong');
+  const handleNext = (success: boolean | 'skip') => {
+    if (success === 'skip') {
+      onCancel();
+      return;
+    }
     
-    setTimeout(() => {
-      const points = isActuallyCorrect ? 10 : 0;
-      const curCorrect = isActuallyCorrect ? 1 : 0;
-      
-      if (step < currentTotal) {
-        setScore(s => s + points);
-        setCorrectCount(c => c + curCorrect);
-        setStep(s => s + 1);
-        generateCurrentTask(step, taskQueue);
-      } else {
-        onComplete(score + points, type, {
-          correctCount: correctCount + curCorrect,
-          totalCount: currentTotal,
-          startTime,
-          endTime: Date.now()
-        });
-      }
-    }, 800);
+    const isSuccess = success === true;
+    const finalCorrect = correctCount + (isSuccess ? 1 : 0);
+
+    if (step < totalItems) {
+      setCorrectCount(finalCorrect); 
+      setStep(s => s + 1);
+      generateTask(step, taskQueue);
+    } else {
+      onComplete(finalCorrect * 10, type, { correctCount: finalCorrect, totalCount: totalItems, startTime, endTime: Date.now() });
+    }
   };
 
-  const startRecording = async () => {
+  const startCapture = async () => {
+    if (mediaType === 'IMAGE') { 
+      setHasCaptured(true); 
+      return; 
+    }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: mediaType === 'VIDEO' });
-      if (mediaType === 'VIDEO' && videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream;
-        videoPreviewRef.current.play();
-      }
+      const isVideo = mediaType === 'VIDEO';
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: isVideo });
+      setIsRecording(true);
       const recorder = new MediaRecorder(stream);
       const chunks: BlobPart[] = [];
       recorder.ondataavailable = e => chunks.push(e.data);
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mediaType === 'VIDEO' ? 'video/mp4' : 'audio/webm' });
+        const blob = new Blob(chunks, { type: isVideo ? 'video/mp4' : 'audio/webm' });
         setMediaBlob(blob);
         stream.getTracks().forEach(t => t.stop());
       };
       recorder.start();
-      mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-    } catch (e) { alert('权限请求失败，请检查设置。'); }
-  };
-
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    setIsRecording(false);
-    setHasCaptured(true);
-  };
-
-  const validateAndSubmit = async () => {
-    if (mediaType === 'AUDIO' && mediaBlob) {
-      if (mediaBlob.size > 2 * 1024 * 1024) {
-        alert('语音文件超过 2MB，请重新录制。');
-        return;
-      }
+      setTimeout(() => { 
+        if (recorder.state === 'recording') { 
+          recorder.stop(); 
+          setIsRecording(false); 
+          setHasCaptured(true); 
+        } 
+      }, 3000);
+    } catch (e) { 
+      alert('权限获取失败，请确保已授权麦克风或摄像头。'); 
     }
-    if (mediaType === 'IMAGE') {
-      // Simulated fingerprint for duplicate check
-      const fingerprint = `fp-${Math.floor(Math.random() * 20)}`; 
-      if (capturedFingerprints.current.has(fingerprint)) {
-        alert('校验结果：检测到图片高度重复，请拍摄一个更独特的视角。');
-        setHasCaptured(false);
-        return;
-      }
-      capturedFingerprints.current.add(fingerprint);
-    }
-    handleNext(true);
   };
-
-  if (showPreview) {
-    return (
-      <div className="bg-[#161618] rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-white/5 animate-in zoom-in-95 duration-500 max-h-[85vh]">
-        <div className="bg-[#1A4BD3] p-6 text-white shrink-0 shadow-lg">
-          <h2 className="text-2xl font-black mb-1">{category || "任务预览"}</h2>
-          <p className="text-blue-100 text-[11px] font-bold opacity-90 leading-relaxed tracking-wider uppercase">
-            数据贡献任务预览
-          </p>
-        </div>
-        
-        <div className="p-6 space-y-6 flex-1 overflow-y-auto bg-[#161618]">
-          <div>
-            <div className="flex items-center space-x-2 mb-3">
-              <span className="w-1.5 h-4 bg-blue-600 rounded-full"></span>
-              <span className="text-[11px] font-black text-white/50 uppercase tracking-widest">采集清单 ({taskQueue.length}项)</span>
-            </div>
-            <div className="bg-white/5 rounded-2xl p-4 space-y-2.5 border border-white/5">
-              {taskQueue.map((t, idx) => (
-                <div key={idx} className="flex items-start text-sm text-white/80 font-bold border-b border-white/5 pb-2 last:border-0 last:pb-0">
-                  <span className="w-6 text-blue-500 font-mono text-xs font-black">{idx + 1}.</span>
-                  <span className="flex-1">{t.prompt}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center space-x-2 mb-3">
-              <span className="w-1.5 h-4 bg-amber-500 rounded-full"></span>
-              <span className="text-[11px] font-black text-white/50 uppercase tracking-widest">采集要求</span>
-            </div>
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-xs text-amber-500 leading-relaxed font-bold italic">
-              {taskQueue[0]?.requirement}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 bg-black/20 border-t border-white/5 shrink-0">
-          <div className="grid grid-cols-2 gap-4">
-            <button onClick={onCancel} className="py-4 rounded-2xl bg-white/5 border border-white/10 text-white/50 font-black active:bg-white/10 transition-colors">取消退出</button>
-            <button onClick={() => setShowPreview(false)} className="py-4 rounded-2xl bg-[#1A4BD3] text-white font-black shadow-xl shadow-blue-500/10 active:scale-95 transition-all">确认开始</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="bg-[#161618] rounded-3xl p-6 shadow-2xl relative border border-white/5 animate-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center mb-6">
-        <span className="text-[10px] font-black text-blue-400 bg-blue-400/10 px-3 py-1.5 rounded-full uppercase border border-blue-400/20">
-          {isCustom ? `自定义环节 (${currentIndex + 1}/10)` : `进度: ${step} / ${currentTotal}`}
-        </span>
-        <button onClick={() => handleNext('skipped')} className="text-[10px] font-black text-red-500 bg-red-500/10 px-3 py-1.5 rounded-full active:bg-red-500/20 transition-colors">退出当前</button>
-      </div>
-
-      <div className="mb-6">
-        <h3 className="text-xl font-bold text-white leading-tight mb-1">
-          {type === TaskType.QUICK_JUDGMENT ? `图中是否包含 ${currentTask?.target}?` : `采集目标：${currentTask?.prompt}`}
-        </h3>
-        <p className="text-[10px] text-white/30 font-bold leading-relaxed">{currentTask?.requirement}</p>
-      </div>
-
-      <div className="mt-4 min-h-[260px] flex flex-col items-center justify-center bg-black/20 rounded-3xl border-2 border-dashed border-white/5 overflow-hidden relative">
-        {type === TaskType.QUICK_JUDGMENT && mediaType === 'IMAGE' ? (
-          <div className="w-full h-full flex flex-col p-4 space-y-4">
-            <img src={currentTask?.imageUrl} className="aspect-square rounded-2xl object-cover shadow-inner bg-black" alt="Judge" />
-            <div className="grid grid-cols-2 gap-4">
-              <button onClick={() => handleNext(true)} className="py-4 border-2 border-[#1A4BD3] text-[#3E8BFF] font-bold rounded-2xl active:bg-[#1A4BD3] active:text-white transition-all">包含</button>
-              <button onClick={() => handleNext(false)} className="py-4 border-2 border-white/5 text-white/30 font-bold rounded-2xl active:bg-white/10 transition-all">不包含</button>
+    <div className="bg-[#161618] rounded-[32px] p-6 border border-white/5 shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">TASK PROGRESS</span>
+          <div className="flex items-center space-x-2">
+            <div className="h-1.5 w-32 bg-white/5 rounded-full overflow-hidden">
+               <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${(step/totalItems)*100}%` }}></div>
             </div>
+            <span className="text-[13px] font-bold text-white/50">{step}/{totalItems}</span>
           </div>
-        ) : (
-          <div className="w-full p-4 space-y-4">
-            {mediaType === 'VIDEO' ? (
-              <div className="w-full aspect-video bg-black rounded-2xl relative overflow-hidden">
-                <video ref={videoPreviewRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                {isRecording && <div className="absolute top-4 left-4 flex items-center space-x-1.5 bg-red-600 text-white text-[9px] font-black px-2 py-1 rounded-full animate-pulse"><span>REC</span></div>}
-              </div>
-            ) : mediaType === 'AUDIO' ? (
-              <div className="w-full h-32 bg-white/5 rounded-2xl flex flex-col items-center justify-center border border-white/5">
-                 {isRecording && <div className="flex space-x-1 mb-2 animate-bounce">{[...Array(5)].map((_, i) => <div key={i} className="w-1 bg-blue-500 rounded-full" style={{height: `${Math.random()*15 + 10}px`}}></div>)}</div>}
-                <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">{isRecording ? '录制中...' : '准备录音'}</span>
-              </div>
-            ) : (
-              <div className={`w-full aspect-square bg-white/5 border-2 border-white/5 rounded-3xl flex flex-col items-center justify-center relative transition-all ${hasCaptured ? 'bg-blue-500/10 border-blue-500/20' : ''}`} onClick={() => !hasCaptured && setHasCaptured(true)}>
-                {hasCaptured ? <div className="flex flex-col items-center animate-in zoom-in"><svg className="w-12 h-12 text-blue-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg><span className="text-[10px] font-bold text-blue-500 uppercase">采集成功</span></div> : <div className="flex flex-col items-center text-white/20"><svg className="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg><span className="text-[10px] font-bold uppercase">拍摄或上传图片</span></div>}
-              </div>
-            )}
+        </div>
+        <button onClick={() => handleNext('skip')} className="px-4 py-2 bg-white/5 rounded-xl text-[12px] font-bold text-white/40 active:bg-white/10 transition-colors">
+          退出任务
+        </button>
+      </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              {(mediaType === 'VIDEO' || mediaType === 'AUDIO') ? (
-                isRecording ? (
-                  <button onClick={stopRecording} className="py-4 bg-red-600 text-white font-bold rounded-2xl active:scale-95 transition-all">停止</button>
-                ) : (
-                  <button onClick={startRecording} className="py-4 bg-[#1A4BD3] text-white font-bold rounded-2xl active:scale-95 transition-all">{hasCaptured ? '重新采集' : '开始采集'}</button>
-                )
-              ) : (
-                <button onClick={() => setHasCaptured(true)} className="py-4 bg-[#1A4BD3] text-white font-bold rounded-2xl active:scale-95 transition-all">{hasCaptured ? '重新采集' : '点击采集'}</button>
-              )}
-              
-              {hasCaptured && !isRecording && (
-                <button onClick={validateAndSubmit} className="py-4 bg-[#10B981] text-white font-bold rounded-2xl animate-in fade-in slide-in-from-top-2">确认提交</button>
-              )}
-            </div>
+      <div className="mb-8">
+        <h3 className="text-[20px] font-bold text-white mb-2">
+          {type === TaskType.QUICK_JUDGMENT ? `图中包含 【${currentTask?.target}】 吗？` : `采集目标：${currentTask?.prompt}`}
+        </h3>
+        <p className="text-[13px] text-white/30 font-medium">标注要求：{currentTask?.requirement}</p>
+      </div>
+
+      <div className="aspect-[4/3] bg-black/60 rounded-3xl border border-white/5 flex items-center justify-center overflow-hidden mb-8 relative">
+        {type === TaskType.QUICK_JUDGMENT && mediaType === 'IMAGE' ? (
+          <img src={currentTask?.imageUrl} className="w-full h-full object-cover" alt="Annotation Target" />
+        ) : (
+          <div className="flex flex-col items-center">
+             {isRecording ? (
+               <div className="flex flex-col items-center">
+                 <div className="w-20 h-20 bg-red-600 rounded-full animate-ping opacity-20 absolute"></div>
+                 <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center text-white font-black z-10">REC</div>
+                 <p className="mt-4 text-[12px] text-red-500 font-bold uppercase tracking-widest">Recording...</p>
+               </div>
+             ) : hasCaptured ? (
+               <div className="flex flex-col items-center">
+                 <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center text-3xl text-green-500">✓</div>
+                 <p className="mt-4 text-[12px] text-green-500 font-bold uppercase tracking-widest">Captured</p>
+               </div>
+             ) : (
+               <div className="text-center">
+                 <div className="text-5xl opacity-10 mb-4">{mediaType === 'VIDEO' ? '📹' : mediaType === 'AUDIO' ? '🎙️' : '📸'}</div>
+                 <p className="text-[12px] text-white/20 font-bold uppercase tracking-widest">Waiting for input</p>
+               </div>
+             )}
           </div>
         )}
       </div>
 
-      {feedback && feedback !== 'skipped' && (
-        <div className={`absolute inset-0 z-[60] rounded-3xl flex flex-col items-center justify-center animate-in fade-in duration-300 ${feedback === 'correct' ? 'bg-[#10B981]/95' : 'bg-red-600/95'}`}>
-          <div className="bg-white/20 p-4 rounded-full mb-4">
-             <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d={feedback === 'correct' ? "M5 13l4 4L19 7" : "M6 18L18 6M6 6l12 12"} /></svg>
+      <div className="flex flex-col space-y-4">
+        {type === TaskType.QUICK_JUDGMENT ? (
+          <div className="grid grid-cols-2 gap-4">
+            <button onClick={() => handleNext(true)} className="py-5 bg-blue-600 rounded-[22px] font-bold text-white text-[17px] shadow-lg shadow-blue-600/20 active:scale-95 transition-all">是 (Yes)</button>
+            <button onClick={() => handleNext(false)} className="py-5 bg-[#232326] border border-white/5 rounded-[22px] font-bold text-white text-[17px] active:scale-95 transition-all">否 (No)</button>
           </div>
-          <p className="text-white font-black text-2xl uppercase tracking-widest">{feedback === 'correct' ? '通过' : '无效'}</p>
-        </div>
-      )}
+        ) : (
+          <>
+            {!hasCaptured ? (
+              <button onClick={startCapture} disabled={isRecording} className="w-full py-5 bg-blue-600 rounded-[22px] font-bold text-white text-[17px] shadow-lg shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50">
+                {isRecording ? '正在录制...' : '点击开始采集'}
+              </button>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => setHasCaptured(false)} className="py-5 bg-[#232326] border border-white/5 rounded-[22px] font-bold text-white text-[17px] active:scale-95 transition-all">重录</button>
+                <button onClick={() => handleNext(true)} className="py-5 bg-green-600 rounded-[22px] font-bold text-white text-[17px] shadow-lg shadow-green-600/20 active:scale-95 transition-all">确认提交</button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

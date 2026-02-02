@@ -2,7 +2,8 @@
 export enum Difficulty {
   EASY = '初级',
   MEDIUM = '中级',
-  HARD = '困难'
+  HARD = '困难',
+  CUSTOM = '自定义'
 }
 
 export enum TaskType {
@@ -18,11 +19,20 @@ export enum CollectionCategory {
   LIFE = '生活类',
   AUDIO = '音频类',
   VIDEO = '视频类',
-  CUSTOM = '自定义分类',
+  CUSTOM = '自定义',
   EMOTION = '情绪快判'
 }
 
 export type MediaType = 'IMAGE' | 'AUDIO' | 'VIDEO' | 'TEXT';
+
+// Added Agent interface definition
+export interface Agent {
+  id: string;
+  name: string;
+  description: string;
+  iconClass: string;
+  gradient: string;
+}
 
 export interface TaskCompletionRecord {
   id: string;
@@ -60,12 +70,4 @@ export interface UserStats {
   quickScore: number;
   collectionScore: number;
   totalScore: number;
-}
-
-export interface Agent {
-  id: string;
-  name: string;
-  description: string;
-  iconClass: string;
-  gradient: string;
 }
