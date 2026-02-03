@@ -60,10 +60,21 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
     }
   };
 
-  const handleNext = (success: boolean | 'skip') => {
-    if (success === 'skip') {
+  const handleNext = (success: boolean | 'skip' | 'exit') => {
+    if (success === 'exit') {
       onCancel();
       return;
+    }
+    
+    if (success === 'skip') {
+      if (step < totalItems) {
+        setStep(s => s + 1);
+        generateTask(step, taskQueue);
+        return;
+      } else {
+        onComplete(correctCount * 10, type, { correctCount, totalCount: totalItems, startTime, endTime: Date.now() });
+        return;
+      }
     }
     
     const isSuccess = success === true;
@@ -112,7 +123,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
     <div className="bg-[#161618] rounded-[32px] p-6 border border-white/5 shadow-2xl animate-in zoom-in-95 duration-300">
       <div className="flex justify-between items-center mb-8">
         <div className="flex flex-col">
-          <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">TASK PROGRESS</span>
+          <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">Mission Progress</span>
           <div className="flex items-center space-x-2">
             <div className="h-1.5 w-32 bg-white/5 rounded-full overflow-hidden">
                <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${(step/totalItems)*100}%` }}></div>
@@ -120,16 +131,21 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
             <span className="text-[13px] font-bold text-white/50">{step}/{totalItems}</span>
           </div>
         </div>
-        <button onClick={() => handleNext('skip')} className="px-4 py-2 bg-white/5 rounded-xl text-[12px] font-bold text-white/40 active:bg-white/10 transition-colors">
-          退出任务
-        </button>
+        <div className="flex space-x-2">
+          <button onClick={() => handleNext('skip')} className="px-4 py-2 bg-white/5 rounded-xl text-[12px] font-bold text-white/40 active:bg-white/10 transition-colors">
+            跳过
+          </button>
+          <button onClick={() => handleNext('exit')} className="px-4 py-2 bg-white/5 rounded-xl text-[12px] font-bold text-red-500/40 active:bg-white/10 transition-colors">
+            退出
+          </button>
+        </div>
       </div>
 
       <div className="mb-8">
         <h3 className="text-[20px] font-bold text-white mb-2">
-          {type === TaskType.QUICK_JUDGMENT ? `图中包含 【${currentTask?.target}】 吗？` : `采集目标：${currentTask?.prompt}`}
+          {type === TaskType.QUICK_JUDGMENT ? `图中包含 【${currentTask?.target}】 吗？` : `采集：${currentTask?.prompt}`}
         </h3>
-        <p className="text-[13px] text-white/30 font-medium">标注要求：{currentTask?.requirement}</p>
+        <p className="text-[13px] text-white/30 font-medium">{currentTask?.requirement}</p>
       </div>
 
       <div className="aspect-[4/3] bg-black/60 rounded-3xl border border-white/5 flex items-center justify-center overflow-hidden mb-8 relative">
@@ -151,7 +167,7 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
              ) : (
                <div className="text-center">
                  <div className="text-5xl opacity-10 mb-4">{mediaType === 'VIDEO' ? '📹' : mediaType === 'AUDIO' ? '🎙️' : '📸'}</div>
-                 <p className="text-[12px] text-white/20 font-bold uppercase tracking-widest">Waiting for input</p>
+                 <p className="text-[12px] text-white/20 font-bold uppercase tracking-widest">Wait for Action</p>
                </div>
              )}
           </div>
@@ -161,19 +177,19 @@ const TaskFlow: React.FC<TaskFlowProps> = ({ type, category, difficulty, mediaTy
       <div className="flex flex-col space-y-4">
         {type === TaskType.QUICK_JUDGMENT ? (
           <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => handleNext(true)} className="py-5 bg-blue-600 rounded-[22px] font-bold text-white text-[17px] shadow-lg shadow-blue-600/20 active:scale-95 transition-all">是 (Yes)</button>
-            <button onClick={() => handleNext(false)} className="py-5 bg-[#232326] border border-white/5 rounded-[22px] font-bold text-white text-[17px] active:scale-95 transition-all">否 (No)</button>
+            <button onClick={() => handleNext(true)} className="py-5 bg-blue-600 rounded-[22px] font-bold text-white text-[17px] shadow-lg shadow-blue-600/20 active:scale-95 transition-all">确认 (Yes)</button>
+            <button onClick={() => handleNext(false)} className="py-5 bg-[#232326] border border-white/5 rounded-[22px] font-bold text-white text-[17px] active:scale-95 transition-all">否定 (No)</button>
           </div>
         ) : (
           <>
             {!hasCaptured ? (
               <button onClick={startCapture} disabled={isRecording} className="w-full py-5 bg-blue-600 rounded-[22px] font-bold text-white text-[17px] shadow-lg shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50">
-                {isRecording ? '正在录制...' : '点击开始采集'}
+                {isRecording ? '正在处理...' : '点击开始采集'}
               </button>
             ) : (
               <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => setHasCaptured(false)} className="py-5 bg-[#232326] border border-white/5 rounded-[22px] font-bold text-white text-[17px] active:scale-95 transition-all">重录</button>
-                <button onClick={() => handleNext(true)} className="py-5 bg-green-600 rounded-[22px] font-bold text-white text-[17px] shadow-lg shadow-green-600/20 active:scale-95 transition-all">确认提交</button>
+                <button onClick={() => setHasCaptured(false)} className="py-5 bg-[#232326] border border-white/5 rounded-[22px] font-bold text-white text-[17px] active:scale-95 transition-all">重新采集</button>
+                <button onClick={() => handleNext(true)} className="py-5 bg-green-600 rounded-[22px] font-bold text-white text-[17px] shadow-lg active:scale-95 transition-all">提交并继续</button>
               </div>
             )}
           </>

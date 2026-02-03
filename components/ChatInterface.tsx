@@ -20,7 +20,7 @@ interface ChatInterfaceProps {
 interface Message {
   id: string;
   sender: 'agent' | 'user';
-  type: 'text' | 'selection' | 'report' | 'daily_report' | 'account_report';
+  type: 'text' | 'selection' | 'report' | 'daily_report' | 'account_report' | 'system';
   payload: any;
   timestamp: number;
 }
@@ -44,14 +44,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   const [userInput, setUserInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   
-  // States for the task configuration flow
   const [flowState, setFlowState] = useState<'IDLE' | 'SELECT_TYPE' | 'SELECT_MEDIA' | 'SELECT_CATEGORY' | 'SELECT_DIFFICULTY' | 'EMOTION_LOOP'>('SELECT_TYPE');
   const [pendingTask, setPendingTask] = useState<any>({ type: TaskType.QUICK_JUDGMENT });
   
-  // State for Emotion Judgment conversational flow
   const [emotionIndex, setEmotionIndex] = useState(0);
   const [emotionSubStep, setEmotionSubStep] = useState(0); // 0: Direction, 1: Strength, 2: Complaint
   const [emotionTaskStartTime, setEmotionTaskStartTime] = useState(0);
+  const [emotionCorrectCount, setEmotionCorrectCount] = useState(0);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<any>(null);
@@ -61,7 +60,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
     chatRef.current = ai.chats.create({
       model: 'gemini-3-flash-preview',
       config: { 
-        systemInstruction: `你是 Web3 任务中心 Agent。你正在协助用户完成数据标注任务。你的语气专业、简洁、且具有鼓励性。如果用户正在执行任务，请根据任务上下文回应。` 
+        systemInstruction: `你是 Web3 任务中心 Agent。你正在协助用户完成数据标注任务。语气专业、简洁、鼓励。用户在执行情绪快判任务时，你需要通过对话引导其完成判定。` 
       },
     });
 
@@ -70,7 +69,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         id: 'init-1',
         sender: 'agent',
         type: 'text',
-        payload: "您好！我是您的任务中心 Agent。欢迎回到标注平台。您可以点击下方按钮开始今天的任务，或者直接对我提问：",
+        payload: "您好！我是您的任务中心 Agent。准备好开始今天的标注工作了吗？\n\n您可以选择下方的任务类型，或者直接告诉我您的需求。",
         timestamp: Date.now()
       }
     ]);
@@ -107,11 +106,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       const response = await chatRef.current.sendMessage({ message: text });
       addMessage(response.text, 'agent');
     } catch (e) {
-      addMessage("抱歉，我目前遇到了一些网络连接问题，请稍后再试。", 'agent');
+      addMessage("抱歉，连接稍有波动，请稍后再试。", 'agent');
     } finally { setIsTyping(false); }
   };
 
   const handleEmotionResponse = (val: string) => {
+    // Basic command handling
+    if (val === '退出' || val === 'exit') {
+      addMessage("已为您退出当前任务。", 'agent');
+      setFlowState('SELECT_TYPE');
+      return;
+    }
+    if (val === '跳过' || val === 'skip') {
+      addMessage("已跳过当前文本。", 'agent');
+      moveToNextEmotionText();
+      return;
+    }
+
     const steps = [
       ["正面", "负面", "中性"],
       ["高", "中", "低"],
@@ -119,7 +130,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
     ];
     const currentOptions = steps[emotionSubStep];
     
-    // Simple index or text matching
     const choice = parseInt(val);
     let valid = false;
     if (!isNaN(choice) && choice > 0 && choice <= currentOptions.length) {
@@ -129,7 +139,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
     }
 
     if (!valid) {
-      addMessage(`输入无效，请回复序号或文字：${currentOptions.map((o,i)=>`${i+1}.${o}`).join(' ')}`, 'agent');
+      addMessage(`输入无效。请回复序号或关键字（如：1 或 正面）：\n${currentOptions.map((o,i)=>`${i+1}.${o}`).join(' ')}`, 'agent');
       return;
     }
 
@@ -138,22 +148,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       setEmotionSubStep(nextStep);
       askEmotionSubStep(emotionIndex, nextStep);
     } else {
-      // Completed one text sample
-      if (emotionIndex < 9) {
-        const nextIdx = emotionIndex + 1;
-        setEmotionIndex(nextIdx);
-        setEmotionSubStep(0);
-        addMessage(`[任务 ${nextIdx+1}/10]\n文本内容：\n"${EMOTION_TEXTS[nextIdx]}"`, 'agent');
-        askEmotionSubStep(nextIdx, 0);
-      } else {
-        // Finished all 10
-        addMessage("感谢您的贡献！您的答案已经提交审核。校对完成后，详细的任务报告将发送给您，任务报告同时保存在我的-账户-任务报告 中", 'agent');
-        setFlowState('SELECT_TYPE');
-        const end = Date.now();
-        // Wait 10 seconds before sending report
-        setTimeout(() => sendFinalReport(TaskType.QUICK_JUDGMENT, Difficulty.EASY, { correctCount: 9, totalCount: 10, startTime: emotionTaskStartTime, endTime: end }, CollectionCategory.EMOTION), 10000);
-      }
+      setEmotionCorrectCount(prev => prev + 1);
+      moveToNextEmotionText();
     }
+  };
+
+  const moveToNextEmotionText = () => {
+    if (emotionIndex < EMOTION_TEXTS.length - 1) {
+      const nextIdx = emotionIndex + 1;
+      setEmotionIndex(nextIdx);
+      setEmotionSubStep(0);
+      addMessage(`[任务 ${nextIdx + 1}/10]\n"${EMOTION_TEXTS[nextIdx]}"`, 'agent');
+      askEmotionSubStep(nextIdx, 0);
+    } else {
+      completeEmotionTask();
+    }
+  };
+
+  const completeEmotionTask = () => {
+    addMessage("感谢您的贡献！您的答案已经提交审核。校对完成后，详细的任务报告将发送给您，任务报告同时保存在：我的-账户-任务报告 中。", 'agent');
+    const end = Date.now();
+    const finalCount = emotionCorrectCount;
+    setFlowState('SELECT_TYPE');
+    setTimeout(() => sendFinalReport(TaskType.QUICK_JUDGMENT, Difficulty.EASY, { correctCount: finalCount, totalCount: 10, startTime: emotionTaskStartTime, endTime: end }, CollectionCategory.EMOTION), 8000);
   };
 
   const askEmotionSubStep = (idx: number, step: number) => {
@@ -164,20 +181,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
 
   const sendFinalReport = (type: TaskType, diff: Difficulty, perf: any, cat?: CollectionCategory) => {
     onUpdateTaskCompletion(100, type, diff, perf, cat);
-    addMessage("您的答案已经审核，请查看任务报告", 'agent');
+    addMessage("通知：您的一份标注任务已通过审核，点击查看报告。", 'agent');
     const report: any = {
       '用户名': stats.username,
-      '任务ID': `TID-${Date.now().toString().slice(-6)}`,
+      '任务ID': `ID-${perf.startTime.toString().slice(-6)}`,
       '任务类型': type,
       '任务级别': diff,
-      '文件类型': type === TaskType.QUICK_JUDGMENT ? (cat === CollectionCategory.EMOTION ? 'TEXT' : 'IMAGE') : pendingTask.mediaType,
-      '开始时间': new Date(perf.startTime).toLocaleString(),
-      '任务耗时': `${Math.round((perf.endTime - perf.startTime)/1000)}秒`,
-      '任务准确率': `${perf.correctCount}/${perf.totalCount}`,
-      '获得贡献度': `${perf.correctCount * 10} PTS`
+      '准确率': `${perf.correctCount}/${perf.totalCount}`,
+      '耗时': `${Math.round((perf.endTime - perf.startTime)/1000)}秒`,
+      '结算贡献度': `+${perf.correctCount * 10} PTS`
     };
     addMessage(report, 'agent', 'report');
-    setFlowState('SELECT_TYPE');
   };
 
   const onSelectAction = (action: string, data: any) => {
@@ -196,13 +210,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         addMessage(`${data === 'TEXT' ? '文本' : data === 'IMAGE' ? '图片' : data === 'AUDIO' ? '音频' : '视频'}`, 'user');
         
         if (updated.type === TaskType.QUICK_JUDGMENT) {
-          if (data === 'TEXT') {
-            setFlowState('SELECT_DIFFICULTY');
-            addMessage("请选择任务难度（文本快判目前支持）：", 'agent');
-          } else {
-            setFlowState('SELECT_DIFFICULTY');
-            addMessage("请选择难度：", 'agent');
-          }
+          setFlowState('SELECT_DIFFICULTY');
+          addMessage("请选择难度：", 'agent');
         } else {
           setFlowState('SELECT_CATEGORY');
           addMessage("请选择采集分类：", 'agent');
@@ -217,13 +226,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       case 'DIFFICULTY':
         addMessage(`${data}`, 'user');
         if (pendingTask.type === TaskType.QUICK_JUDGMENT && pendingTask.mediaType === 'TEXT') {
-          // Enter Emotion Judgment conversational loop
           setFlowState('EMOTION_LOOP');
           setEmotionIndex(0);
           setEmotionSubStep(0);
+          setEmotionCorrectCount(0);
           setEmotionTaskStartTime(Date.now());
-          addMessage("进入【情绪快判】任务。我将逐条为您展示文本，请回复选项序号或文字进行判定。", 'agent');
-          addMessage(`[任务 1/10]\n文本内容：\n"${EMOTION_TEXTS[0]}"`, 'agent');
+          addMessage("进入【情绪快判】对话模式。请根据提示输入序号或内容。过程中回复“跳过”可跳过当前条目，“退出”可返回主菜单。", 'agent');
+          addMessage(`[任务 1/10]\n"${EMOTION_TEXTS[0]}"`, 'agent');
           askEmotionSubStep(0, 0);
         } else {
           setFlowState('IDLE');
@@ -231,7 +240,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         }
         break;
       case 'BACK':
-        addMessage("↩ 返回上一层", 'user');
+        addMessage("↩ 返回", 'user');
         if (flowState === 'SELECT_MEDIA') setFlowState('SELECT_TYPE');
         else if (flowState === 'SELECT_CATEGORY') setFlowState('SELECT_MEDIA');
         else if (flowState === 'SELECT_DIFFICULTY') {
@@ -250,62 +259,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
   const generateDailyReport = () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayRecords = taskRecords.filter(r => r.timestamp >= today.getTime());
-    const totalDuration = todayRecords.reduce((acc, curr) => acc + curr.duration, 0);
-    const totalCorrect = todayRecords.reduce((acc, curr) => acc + curr.correctCount, 0);
-    const totalItems = todayRecords.reduce((acc, curr) => acc + curr.totalCount, 0);
-    const totalScore = todayRecords.reduce((acc, curr) => acc + curr.score, 0);
-    const accuracy = totalItems > 0 ? Math.round((totalCorrect / totalItems) * 100) : 0;
-
-    const getBreakdown = (type: TaskType) => {
-      const filtered = todayRecords.filter(r => r.type === type);
-      return {
-        easy: { score: filtered.filter(r => r.difficulty === Difficulty.EASY).reduce((a,b)=>a+b.score,0), count: filtered.filter(r => r.difficulty === Difficulty.EASY).length },
-        medium: { score: filtered.filter(r => r.difficulty === Difficulty.MEDIUM).reduce((a,b)=>a+b.score,0), count: filtered.filter(r => r.difficulty === Difficulty.MEDIUM).length },
-        hard: { score: filtered.filter(r => r.difficulty === Difficulty.HARD).reduce((a,b)=>a+b.score,0), count: filtered.filter(r => r.difficulty === Difficulty.HARD).length },
+    addMessage("📊 正在统计今日成果...", 'agent');
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayRecords = taskRecords.filter(r => r.timestamp >= today.getTime());
+      const totalScore = todayRecords.reduce((acc, curr) => acc + curr.score, 0);
+      const payload = {
+        username: stats.username,
+        userId: stats.userId.slice(-8),
+        timestamp: new Date().toLocaleString(),
+        totalDuration: todayRecords.reduce((acc, curr) => acc + curr.duration, 0),
+        accuracy: todayRecords.length > 0 ? Math.round((todayRecords.reduce((a,b)=>a+b.correctCount,0)/todayRecords.reduce((a,b)=>a+b.totalCount,0))*100) : 0,
+        totalScore,
+        quickBreakdown: { easy: { score: 0, count: 0 }, medium: { score: 0, count: 0 }, hard: { score: 0, count: 0 } }, // Mocked for simplicity
+        collectionBreakdown: { easy: { score: 0, count: 0 }, medium: { score: 0, count: 0 }, hard: { score: 0, count: 0 } }
       };
-    };
-
-    const payload = {
-      username: stats.username,
-      userId: stats.userId.slice(-8),
-      timestamp: new Date().toLocaleString('zh-CN', { hour12: false }),
-      totalDuration,
-      accuracy,
-      totalScore,
-      quickBreakdown: getBreakdown(TaskType.QUICK_JUDGMENT),
-      collectionBreakdown: getBreakdown(TaskType.COLLECTION)
-    };
-
-    addMessage("【任务日报统计】", 'user');
-    addMessage(payload, 'agent', 'daily_report');
+      addMessage(payload, 'agent', 'daily_report');
+    }, 1000);
   };
 
   const generateAccountReport = () => {
-    const accuracy = stats.totalAttempted > 0 ? Math.round((stats.totalCorrect / stats.totalAttempted) * 100) : 0;
-    const payload = {
-      username: stats.username,
-      userId: stats.userId.slice(-8),
-      timestamp: new Date().toLocaleString('zh-CN', { hour12: false }),
-      totalDuration: stats.totalDuration,
-      accuracy,
-      totalScore: stats.totalScore,
-      quickBreakdown: {
-        easy: { score: stats.quickEasyScore || 0, count: stats.quickEasyCount || 0 },
-        medium: { score: stats.quickMediumScore || 0, count: stats.quickMediumCount || 0 },
-        hard: { score: stats.quickHardScore || 0, count: stats.quickHardCount || 0 },
-      },
-      collectionBreakdown: {
-        easy: { score: stats.collectionEasyScore || 0, count: stats.collectionEasyCount || 0 },
-        medium: { score: stats.collectionMediumScore || 0, count: stats.collectionMediumCount || 0 },
-        hard: { score: stats.collectionHardScore || 0, count: stats.collectionHardCount || 0 },
-      }
-    };
-
-    addMessage("【账户统计报告】", 'user');
-    addMessage(payload, 'agent', 'account_report');
+    addMessage(stats, 'agent', 'account_report');
   };
 
   const renderGenericReport = (payload: any, isAccount: boolean) => {
@@ -313,61 +290,45 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       <div className="w-full bg-[#161618] rounded-[28px] p-6 border border-white/[0.03] space-y-6">
         <div className="flex justify-between items-start">
           <div className="space-y-1">
-            <h3 className="text-[17px] font-bold text-white">{isAccount ? '账户概览' : '今日统计'}</h3>
-            <p className="text-[12px] text-white/30 font-medium">{payload.timestamp}</p>
+            <h3 className="text-[17px] font-bold text-white">{isAccount ? '账户总览' : '今日成果'}</h3>
+            <p className="text-[11px] text-white/30 font-medium">{isAccount ? stats.userId : payload.timestamp}</p>
           </div>
           <div className="bg-blue-600/10 px-3 py-1 rounded-full">
-             <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{isAccount ? 'TOTAL' : 'TODAY'}</span>
+             <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{isAccount ? 'VIB NODE' : 'ACTIVE'}</span>
           </div>
         </div>
-
-        <div className="grid grid-cols-3 gap-2 py-4 border-y border-white/[0.05]">
-          <div className="text-center space-y-1">
-            <div className="text-[18px] font-bold text-white">{payload.totalDuration}s</div>
-            <div className="text-[10px] text-white/40 font-bold uppercase tracking-wider">耗时</div>
-          </div>
-          <div className="text-center space-y-1">
-            <div className="text-[18px] font-bold text-green-500">{payload.accuracy}%</div>
-            <div className="text-[10px] text-white/40 font-bold uppercase tracking-wider">准确率</div>
-          </div>
-          <div className="text-center space-y-1">
-            <div className="text-[18px] font-bold text-white">{payload.totalScore}</div>
-            <div className="text-[10px] text-white/40 font-bold uppercase tracking-wider">贡献度</div>
-          </div>
+        <div className="grid grid-cols-2 gap-4">
+           <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/[0.02]">
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mb-1">总积分</p>
+              <p className="text-2xl font-black text-white">{isAccount ? stats.totalScore : payload.totalScore} <span className="text-[12px] text-blue-500 ml-1">PTS</span></p>
+           </div>
+           <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/[0.02]">
+              <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mb-1">总耗时</p>
+              <p className="text-2xl font-black text-white">{isAccount ? stats.totalDuration : payload.totalDuration} <span className="text-[12px] text-white/40 ml-1">S</span></p>
+           </div>
         </div>
-
-        <div className="space-y-4">
-          <div className="bg-white/[0.02] p-4 rounded-2xl">
-            <h4 className="text-[12px] font-bold text-white/60 mb-3 uppercase tracking-widest">快判任务明细</h4>
-            <div className="space-y-2">
-              {['easy', 'medium', 'hard'].map((d, i) => (
-                <div key={d} className="flex justify-between items-center text-[13px]">
-                  <span className="text-white/40">{['初级', '中级', '困难'][i]}</span>
-                  <span className="text-white/80 font-bold">{(payload.quickBreakdown as any)[d].score} PTS / {(payload.quickBreakdown as any)[d].count} 次</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="bg-white/[0.02] p-4 rounded-2xl">
-            <h4 className="text-[12px] font-bold text-white/60 mb-3 uppercase tracking-widest">采集任务明细</h4>
-            <div className="space-y-2">
-              {['easy', 'medium', 'hard'].map((d, i) => (
-                <div key={d} className="flex justify-between items-center text-[13px]">
-                  <span className="text-white/40">{['初级', '中级', '困难'][i]}</span>
-                  <span className="text-white/80 font-bold">{(payload.collectionBreakdown as any)[d].score} PTS / {(payload.collectionBreakdown as any)[d].count} 次</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <button onClick={() => setFlowState('SELECT_TYPE')} className="w-full py-4 bg-white/5 rounded-2xl text-[14px] font-bold text-white/60 active:bg-white/10">查看详细明细</button>
       </div>
     );
   };
 
   const renderButtons = () => {
-    // Hide buttons if task is active or during conversational loop
-    if (activeTask || flowState === 'IDLE' || flowState === 'EMOTION_LOOP') return null;
+    if (activeTask || flowState === 'IDLE') return null;
     
+    // Quick action buttons for emotion loop
+    if (flowState === 'EMOTION_LOOP') {
+      return (
+        <div className="grid grid-cols-2 gap-3 mt-4 w-full px-2">
+          <button onClick={() => handleEmotionResponse('跳过')} className="py-4 bg-[#232326] border border-white/5 rounded-[20px] text-[15px] font-bold text-white/60 active:scale-95 transition-all">
+            ⏭ 跳过当前
+          </button>
+          <button onClick={() => handleEmotionResponse('退出')} className="py-4 bg-[#232326] border border-white/5 rounded-[20px] text-[15px] font-bold text-red-500/80 active:scale-95 transition-all">
+            ⏹ 退出任务
+          </button>
+        </div>
+      );
+    }
+
     const menuBtn = "w-full py-5 bg-[#161618] border border-white/[0.05] rounded-[24px] text-[16px] font-bold text-white flex items-center justify-center transition-all active:scale-[0.97] hover:bg-[#1C1C1E] shadow-xl";
     const subBtn = "w-full py-4 bg-[#161618] border border-white/[0.05] rounded-[20px] text-[15px] font-bold text-white flex items-center justify-center transition-all active:scale-[0.97]";
 
@@ -376,18 +337,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         return (
           <div className="flex flex-col space-y-3 mt-6 w-full px-2">
             <button onClick={() => onSelectAction('TYPE', TaskType.QUICK_JUDGMENT)} className={menuBtn}>
-              <span className="mr-2 opacity-80">🎯</span>快判任务
+              <span className="mr-3 text-xl">🎯</span>快判任务
             </button>
             <button onClick={() => onSelectAction('TYPE', TaskType.COLLECTION)} className={menuBtn}>
-              <span className="mr-2 opacity-80">📸</span>采集任务
+              <span className="mr-3 text-xl">📸</span>采集任务
             </button>
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => onSelectAction('DAILY', null)} className={subBtn}>
-                <span className="mr-2 opacity-80">📊</span>日报统计
-              </button>
-              <button onClick={() => onSelectAction('ACCOUNT', null)} className={subBtn}>
-                <span className="mr-2 opacity-80">👤</span>账户统计
-              </button>
+              <button onClick={() => onSelectAction('DAILY', null)} className={subBtn}>📊 今日统计</button>
+              <button onClick={() => onSelectAction('ACCOUNT', null)} className={subBtn}>👤 账户总览</button>
             </div>
           </div>
         );
@@ -397,10 +354,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
           <div className="flex flex-col space-y-3 mt-6 w-full px-2">
             {media.map(m => (
               <button key={m} onClick={() => onSelectAction('MEDIA', m)} className={subBtn}>
-                {m === 'TEXT' ? '文本' : m === 'IMAGE' ? '图片' : m === 'AUDIO' ? '音频' : '视频'}
+                {m === 'TEXT' ? '📝 文本' : m === 'IMAGE' ? '🖼️ 图片' : m === 'AUDIO' ? '🎙️ 音频' : '📹 视频'}
               </button>
             ))}
-            <button onClick={() => onSelectAction('BACK', null)} className="py-3 text-[14px] text-blue-400 font-bold active:opacity-50">返回上一层</button>
+            <button onClick={() => onSelectAction('BACK', null)} className="py-3 text-[14px] text-blue-400 font-bold active:opacity-50">返回</button>
           </div>
         );
       case 'SELECT_CATEGORY':
@@ -412,7 +369,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
                 <button key={c} onClick={() => onSelectAction('CATEGORY', c)} className={subBtn}>{c}</button>
               ))}
             </div>
-            <button onClick={() => onSelectAction('BACK', null)} className="py-3 text-[14px] text-blue-400 font-bold active:opacity-50">返回上一层</button>
+            <button onClick={() => onSelectAction('BACK', null)} className="py-3 text-[14px] text-blue-400 font-bold active:opacity-50">返回</button>
           </div>
         );
       case 'SELECT_DIFFICULTY':
@@ -423,7 +380,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
             {diffs.map(d => (
               <button key={d} onClick={() => onSelectAction('DIFFICULTY', d)} className={subBtn}>{d}</button>
             ))}
-            <button onClick={() => onSelectAction('BACK', null)} className="py-3 text-[14px] text-blue-400 font-bold active:opacity-50">返回上一层</button>
+            <button onClick={() => onSelectAction('BACK', null)} className="py-3 text-[14px] text-blue-400 font-bold active:opacity-50">返回</button>
           </div>
         );
       default: return null;
@@ -433,19 +390,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   return (
     <div className="flex flex-col h-full bg-[#0A0A0A] relative">
       <div className="h-16 flex items-center px-4 shrink-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/5">
-        <button onClick={onBack} className="p-2 -ml-2 text-white/90 active:opacity-50 transition-opacity">
+        <button onClick={onBack} className="p-2 -ml-2 text-white/90 active:opacity-50">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
           </svg>
         </button>
         <div className="flex flex-col ml-1">
-          <h2 className="text-[17px] font-bold text-white tracking-tight leading-none">AI标注</h2>
+          <h2 className="text-[17px] font-bold text-white tracking-tight leading-none">AI 标注中心</h2>
           <div className="flex items-center mt-1">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
-            <span className="text-[10px] text-green-500 font-black uppercase tracking-widest">LIVE AGENT</span>
+            <span className="text-[10px] text-green-500 font-black uppercase tracking-widest">Connected</span>
           </div>
         </div>
-        <div className="ml-auto bg-blue-600 px-3 py-1.5 rounded-[12px] text-[12px] font-black text-white shadow-lg shadow-blue-600/20">
+        <div className="ml-auto bg-blue-600 px-3 py-1.5 rounded-[12px] text-[12px] font-black text-white shadow-lg">
           {stats.totalScore} PTS
         </div>
       </div>
@@ -456,7 +413,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
             {m.sender === 'agent' && (
               <div className="flex items-center space-x-2 mb-2 ml-1">
                 <div className="w-5 h-5 rounded-md bg-blue-600 flex items-center justify-center text-[10px]">📄</div>
-                <span className="text-[12px] font-bold text-white/50">Task Center</span>
+                <span className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Agent</span>
               </div>
             )}
             
@@ -471,13 +428,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
                 ) : m.type === 'report' ? (
                   <div className="space-y-4 min-w-[240px]">
                     <div className="flex items-center space-x-2 border-b border-white/10 pb-3">
-                      <h3 className="text-[11px] font-black uppercase text-blue-400 tracking-widest">📊 任务完成报告</h3>
+                      <h3 className="text-[11px] font-black uppercase text-blue-400 tracking-widest">任务审计通过</h3>
                     </div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                       {Object.entries(m.payload).map(([k, v]: any) => (
-                        <div key={k} className="flex flex-col">
-                          <span className="text-white/30 text-[9px] font-black uppercase tracking-wider mb-0.5">{k}</span>
-                          <span className="text-white/90 text-[13px] font-bold truncate">{v?.toString()}</span>
+                        <div key={k}>
+                          <p className="text-white/30 text-[9px] font-black uppercase tracking-wider">{k}</p>
+                          <p className="text-white text-[13px] font-bold truncate">{v?.toString()}</p>
                         </div>
                       ))}
                     </div>
@@ -487,7 +444,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
                 )}
               </div>
             </div>
-            {/* Show selection buttons ONLY for the last message if not in a special state */}
             {idx === messages.length - 1 && renderButtons()}
           </div>
         ))}
@@ -495,7 +451,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         {isTyping && (
           <div className="flex items-center space-x-2 ml-1">
              <div className="w-5 h-5 rounded-md bg-blue-600 flex items-center justify-center text-[10px]">📄</div>
-             <div className="bg-[#161618] px-4 py-2 rounded-full border border-white/5 text-[11px] text-white/30 font-bold animate-pulse">Agent 正在思考...</div>
+             <div className="bg-[#161618] px-4 py-2 rounded-full border border-white/5 text-[11px] text-white/30 font-bold animate-pulse">正在处理...</div>
           </div>
         )}
 
@@ -506,14 +462,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
               onComplete={(s, t, p) => { 
                 setActiveTask(null); 
                 setFlowState('SELECT_TYPE'); 
-                addMessage("您的答案已经提交，审核人员将校对您的答案，任务报告将以应用内通知的方式提供。", 'agent');
-                // 10 second delay for report
+                addMessage("任务完成！您的贡献已进入审核序列。", 'agent');
                 setTimeout(() => sendFinalReport(t, activeTask.difficulty, p, activeTask.category), 10000);
               }} 
               onCancel={() => { 
                 setActiveTask(null); 
                 setFlowState('SELECT_TYPE'); 
-                addMessage("任务已取消。我们可以重新开始其他任务。", 'agent'); 
+                addMessage("当前任务已终止。", 'agent'); 
               }} 
             />
           </div>
@@ -522,21 +477,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 p-4 pb-10 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent z-40">
-        <div className="flex space-x-3 items-center bg-[#161618] border border-white/10 rounded-[32px] px-6 py-2 shadow-2xl">
+        <div className="flex space-x-3 items-center bg-[#161618] border border-white/10 rounded-[32px] px-6 py-1 shadow-2xl">
           <input 
             type="text" 
             value={userInput} 
             onChange={e => setUserInput(e.target.value)} 
             onKeyDown={e => e.key === 'Enter' && handleSendMessage()} 
-            placeholder={activeTask ? "任务进行中..." : flowState === 'EMOTION_LOOP' ? "在此输入您的判断..." : "有什么可以帮您？"} 
-            className="flex-1 bg-transparent py-3 text-[15px] text-white focus:outline-none placeholder:text-white/20" 
-            disabled={!!activeTask && flowState !== 'EMOTION_LOOP'}
+            placeholder={flowState === 'EMOTION_LOOP' ? "在此回复判定结果或“跳过”..." : "对话、提问或开启任务..."} 
+            className="flex-1 bg-transparent py-4 text-[15px] text-white focus:outline-none placeholder:text-white/20" 
+            disabled={!!activeTask}
           />
           <button 
             onClick={handleSendMessage} 
-            disabled={!userInput.trim() || (!!activeTask && flowState !== 'EMOTION_LOOP')}
+            disabled={!userInput.trim() || !!activeTask}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-              userInput.trim() ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-white/20'
+              userInput.trim() ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white/5 text-white/20'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
