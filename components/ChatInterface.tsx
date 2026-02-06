@@ -2,7 +2,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { Difficulty, TaskType, UserStats, CollectionCategory, TaskCompletionRecord, MediaType } from '../types.ts';
-import TaskFlow from './TaskFlow.tsx';
 
 interface ChatInterfaceProps {
   stats: UserStats;
@@ -20,80 +19,62 @@ interface ChatInterfaceProps {
 interface Message {
   id: string;
   sender: 'agent' | 'user';
-  type: 'text' | 'selection' | 'report' | 'daily_report' | 'account_report' | 'system' | 'feedback';
+  type: 'text' | 'selection' | 'report' | 'daily_report' | 'account_report' | 'system' | 'menu_options' | 'task_summary' | 'status';
   payload: any;
   timestamp: number;
 }
 
-// Strictly 6 emotion labels as requested
-const EMOTION_LABELS = ["sadness", "joy", "love", "anger", "fear", "surprise"];
+const AGENT_SYSTEM_PROMPT = `
+你是一个【可聊天的数据标注 AI Agent】。
+你的核心目标是：
+在与用户自然对话的过程中，介绍下数据标注是什么，介绍数据标注的概念之类的。
 
-const EMOTION_POOL = {
-  [Difficulty.EASY]: [
-    { text: "i just feel really helpless and heavy hearted.", labels: ["sadness"] },
-    { text: "i am feeling so happy today because i got the job!", labels: ["joy"] },
-    { text: "i feel so much love for my family and friends.", labels: ["love"] },
-    { text: "i am absolutely furious with the customer service.", labels: ["anger"] },
-    { text: "i am terrified of what might happen next.", labels: ["fear"] },
-    { text: "i was completely surprised by the sudden party!", labels: ["surprise"] },
-    { text: "it makes me so angry when people lie to me.", labels: ["anger"] },
-    { text: "seeing her smile brought so much warmth to my heart.", labels: ["love"] }
-  ],
-  [Difficulty.MEDIUM]: [
-    { text: "I can't believe they lied to me after all we went through, it hurts so much", labels: ["anger", "sadness"] },
-    { text: "I am so excited to see what happens next, but also a bit nervous.", labels: ["joy", "fear"] },
-    { text: "That was an incredible performance! I love watching them dance.", labels: ["joy", "love"] },
-    { text: "I'm shocked you said that, it really makes me feel quite low.", labels: ["surprise", "sadness"] },
-    { text: "It's so infuriating that they won't help, I'm genuinely worried now.", labels: ["anger", "fear"] }
-  ],
-  [Difficulty.HARD]: [
-    { text: "I'm shocked you did this, but I love the outcome, even though I'm still quite angry about the process.", labels: ["surprise", "love", "anger"] },
-    { text: "I'm terrified for our future, yet filled with joy to be with you, and I feel so much love.", labels: ["fear", "joy", "love"] },
-    { text: "It was a total surprise when he yelled at me; it broke my heart and made me so sad.", labels: ["surprise", "anger", "sadness"] }
-  ]
-};
+重要原则：
+- 对用户：你是友好、自然的助手
+- 对系统：你是严格、克制的标注引擎
+- 不向用户暴露任何标签、规则或标注逻辑
+- 不确定时，允许继续提问
+`;
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBack, onUpdateTaskCompletion }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [activeTask, setActiveTask] = useState<any>(null);
   const [userInput, setUserInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   
-  const [flowState, setFlowState] = useState<'IDLE' | 'SELECT_TYPE' | 'SELECT_MEDIA' | 'SELECT_CATEGORY' | 'SELECT_DIFFICULTY' | 'EMOTION_LOOP'>('SELECT_TYPE');
-  const [pendingTask, setPendingTask] = useState<any>({ type: TaskType.QUICK_JUDGMENT });
+  // flowState manages the operational flow
+  const [flowState, setFlowState] = useState<'IDLE' | 'SELECT_TYPE' | 'SELECT_MEDIA' | 'SELECT_DIFFICULTY' | 'EMOTION_LOOP' | 'SUBMITTED'>('IDLE');
   
-  const [emotionIndex, setEmotionIndex] = useState(0);
-  const [emotionTaskStartTime, setEmotionTaskStartTime] = useState(0);
-  const [emotionCorrectCount, setEmotionCorrectCount] = useState(0);
-  const [selectedEmotions, setSelectedEmotions] = useState<string[]>([]);
-  const [currentDifficulty, setCurrentDifficulty] = useState<Difficulty>(Difficulty.EASY);
+  const [currentTaskConfig, setCurrentTaskConfig] = useState<any>({
+    type: null,
+    mediaType: null,
+    difficulty: Difficulty.EASY,
+    startTime: 0
+  });
 
+  const [taskProgress, setTaskProgress] = useState({ index: 0, correct: 0 });
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const chatRef = useRef<any>(null);
-
-  const INITIAL_MESSAGE: Message = {
-    id: 'init-1',
-    sender: 'agent',
-    type: 'text',
-    payload: "您好！我是您的任务中心 Agent。准备好开始今天的标注工作了吗？\n\n请选择下方的任务类型：",
-    timestamp: Date.now()
-  };
+  const aiChatRef = useRef<any>(null);
 
   useEffect(() => {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    chatRef.current = ai.chats.create({
+    aiChatRef.current = ai.chats.create({
       model: 'gemini-3-flash-preview',
-      config: { 
-        systemInstruction: `你是 Web3 任务中心 Agent。你正在协助用户进行情绪快判任务。可选标签只有：${EMOTION_LABELS.join(', ')}。` 
-      },
+      config: { systemInstruction: AGENT_SYSTEM_PROMPT },
     });
-
-    setMessages([INITIAL_MESSAGE]);
+    
+    // Initial Greeting
+    setMessages([{
+      id: 'init-1',
+      sender: 'agent',
+      type: 'text',
+      payload: "您好！我是您的 AI 标注助手。很高兴为您介绍数据标注：简单来说，数据标注是给原始数据（如图片、文字）打上标签，让 AI 能够学习和理解。您可以点击右下角菜单开启任务，让我们一起训练更聪明的 AI！",
+      timestamp: Date.now()
+    }]);
   }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, activeTask, flowState, isTyping, selectedEmotions]);
+  }, [messages, flowState, taskProgress]);
 
   const addMessage = (payload: any, sender: 'agent' | 'user' = 'agent', type: Message['type'] = 'text') => {
     setMessages(prev => [...prev, {
@@ -106,468 +87,298 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
   const handleSendMessage = async () => {
-    if (!userInput.trim() || isTyping) return;
+    if (!userInput.trim() || isTyping || flowState !== 'IDLE') return;
     const text = userInput.trim();
     setUserInput('');
-
-    if (flowState === 'EMOTION_LOOP') {
-      addMessage(text, 'user');
-      handleEmotionResponse(text);
-      return;
-    }
-
     addMessage(text, 'user');
     setIsTyping(true);
+    
     try {
-      const response = await chatRef.current.sendMessage({ message: text });
-      addMessage(response.text, 'agent');
+      const result = await aiChatRef.current.sendMessage({ message: text });
+      addMessage(result.text, 'agent');
     } catch (e) {
-      addMessage("抱歉，连接稍有波动，请稍后再试。", 'agent');
+      addMessage("系统通信异常，请重试。", 'agent');
     } finally { setIsTyping(false); }
   };
 
-  const handleEmotionResponse = (val: string) => {
-    const lowerVal = val.toLowerCase();
-    if (lowerVal === '退出' || lowerVal === 'exit') {
-      // CLEAR HISTORY ON EXIT
-      setMessages([INITIAL_MESSAGE]);
-      setFlowState('SELECT_TYPE');
-      setSelectedEmotions([]);
-      setEmotionIndex(0);
-      return;
-    }
-    if (lowerVal === '跳过' || lowerVal === 'skip') {
-      addMessage("已跳过当前题目。", 'agent');
-      moveToNextEmotionText();
-      return;
-    }
-
-    if (lowerVal === 'submit' || lowerVal === '确定') {
-      submitEmotionChoice();
-      return;
-    }
-
-    if (EMOTION_LABELS.includes(lowerVal)) {
-      toggleEmotionSelection(lowerVal);
-    }
-  };
-
-  const toggleEmotionSelection = (label: string) => {
-    const reqCount = currentDifficulty === Difficulty.HARD ? 3 : currentDifficulty === Difficulty.MEDIUM ? 2 : 1;
-    
-    setSelectedEmotions(prev => {
-      if (prev.includes(label)) {
-        return prev.filter(l => l !== label);
-      }
-      if (prev.length < reqCount) {
-        const next = [...prev, label];
-        // For easy mode (1 label), auto-submit for smoother experience
-        if (reqCount === 1) {
-          setTimeout(() => submitEmotionChoice(next), 200);
-        }
-        return next;
-      }
-      return prev;
-    });
-  };
-
-  const submitEmotionChoice = (forcedSelection?: string[]) => {
-    const selection = forcedSelection || selectedEmotions;
-    const reqCount = currentDifficulty === Difficulty.HARD ? 3 : currentDifficulty === Difficulty.MEDIUM ? 2 : 1;
-    
-    if (selection.length < reqCount) {
-      addMessage(`判定未完成，请根据难度选择 ${reqCount} 个情绪。`, 'agent', 'system');
-      return;
-    }
-
-    const pool = (EMOTION_POOL as any)[currentDifficulty];
-    const currentData = pool[emotionIndex % pool.length];
-    const correctLabels = currentData.labels.map((l: string) => l.toLowerCase());
-    
-    // Check if user selection matches correct labels exactly
-    const isCorrect = selection.length === correctLabels.length && selection.every(s => correctLabels.includes(s));
-    
-    if (isCorrect) {
-      setEmotionCorrectCount(prev => prev + 1);
-      addMessage(`✅ 判断正确！该文本情绪为: ${correctLabels.join(' & ')}`, 'agent', 'system');
-    } else {
-      addMessage(`❌ 判断有误。正确答案应该是: ${correctLabels.join(' & ')}`, 'agent', 'system');
-    }
-
-    setTimeout(() => {
-      moveToNextEmotionText();
-    }, 1200);
-  };
-
-  const moveToNextEmotionText = () => {
-    const taskLimit = 10;
-    setSelectedEmotions([]);
-    
-    if (emotionIndex < taskLimit - 1) {
-      const nextIdx = emotionIndex + 1;
-      setEmotionIndex(nextIdx);
-      const pool = (EMOTION_POOL as any)[currentDifficulty];
-      const nextData = pool[nextIdx % pool.length];
-      const reqCount = currentDifficulty === Difficulty.HARD ? 3 : currentDifficulty === Difficulty.MEDIUM ? 2 : 1;
-      addMessage(`[任务 ${nextIdx + 1}/${taskLimit}]\n"${nextData.text}"\n请根据文本选择 ${reqCount} 个情绪：`, 'agent');
-    } else {
-      completeEmotionTask();
-    }
-  };
-
-  const completeEmotionTask = () => {
-    addMessage("感谢您的贡献！任务已完成，正在生成审计报告...", 'agent');
-    const end = Date.now();
-    const finalCount = emotionCorrectCount;
+  const handleOpenMenu = () => {
+    if (flowState !== 'IDLE') return;
     setFlowState('SELECT_TYPE');
-    setTimeout(() => sendFinalReport(TaskType.QUICK_JUDGMENT, currentDifficulty, { correctCount: finalCount, totalCount: 10, startTime: emotionTaskStartTime, endTime: end }, CollectionCategory.EMOTION), 4000);
+    addMessage("请选择功能：", 'agent', 'menu_options');
   };
 
-  const sendFinalReport = (type: TaskType, diff: Difficulty, perf: any, cat?: CollectionCategory) => {
-    onUpdateTaskCompletion(100, type, diff, perf, cat);
-    addMessage("通知：您的最新情绪快判报告已送达。", 'agent');
-    const report: any = {
-      '判定等级': diff,
-      '判定总数': perf.totalCount,
-      '准确判定': perf.correctCount,
-      '准确率': `${Math.round((perf.correctCount / perf.totalCount) * 100)}%`,
-      '奖励积分': `+${perf.correctCount * 15} PTS`
-    };
-    addMessage(report, 'agent', 'report');
-  };
-
-  const onSelectAction = (action: string, data: any) => {
-    if (activeTask || flowState === 'EMOTION_LOOP') return;
-    
+  const handleActionSelect = (action: string, value: any) => {
     switch (action) {
       case 'TYPE':
-        setPendingTask({ type: data });
+        addMessage(value, 'user');
+        setCurrentTaskConfig(prev => ({ ...prev, type: value }));
         setFlowState('SELECT_MEDIA');
-        addMessage(`【${data}】`, 'user');
-        addMessage("请选择媒体类型：", 'agent');
+        addMessage(`开启【${value}】。请选择文件类型：`, 'agent');
         break;
       case 'MEDIA':
-        const updated = { ...pendingTask, mediaType: data };
-        setPendingTask(updated);
-        addMessage(`${data === 'TEXT' ? '文本' : data === 'IMAGE' ? '图片' : data === 'AUDIO' ? '音频' : '视频'}`, 'user');
-        
-        if (updated.type === TaskType.QUICK_JUDGMENT) {
-          setFlowState('SELECT_DIFFICULTY');
-          addMessage("请选择任务难度：", 'agent');
+        addMessage(value, 'user');
+        const media = value === '文本' ? 'TEXT' : 'IMAGE';
+        setCurrentTaskConfig(prev => ({ ...prev, mediaType: media }));
+        if (value === '文本') {
+          addMessage("系统提示：已激活“情绪快判”专项任务。请选择任务难度：", 'agent');
         } else {
-          setFlowState('SELECT_CATEGORY');
-          addMessage("请选择采集分类：", 'agent');
+          addMessage("请选择任务难度：", 'agent');
         }
-        break;
-      case 'CATEGORY':
-        setPendingTask(prev => ({ ...prev, category: data }));
-        addMessage(`${data}`, 'user');
         setFlowState('SELECT_DIFFICULTY');
-        addMessage("请选择任务难度：", 'agent');
         break;
       case 'DIFFICULTY':
-        addMessage(`${data}`, 'user');
-        setCurrentDifficulty(data as Difficulty);
-        if (pendingTask.type === TaskType.QUICK_JUDGMENT && pendingTask.mediaType === 'TEXT') {
-          setFlowState('EMOTION_LOOP');
-          setEmotionIndex(0);
-          setEmotionCorrectCount(0);
-          setSelectedEmotions([]);
-          setEmotionTaskStartTime(Date.now());
-          const reqCount = data === Difficulty.HARD ? 3 : data === Difficulty.MEDIUM ? 2 : 1;
-          addMessage(`已开启【情绪快判】${data}任务。可选情绪：${EMOTION_LABELS.join(', ')}。`, 'agent');
-          const pool = (EMOTION_POOL as any)[data as Difficulty];
-          const firstTask = pool[0];
-          addMessage(`[任务 1/10]\n"${firstTask.text}"\n请判别其表达的情绪（需选 ${reqCount} 个）：`, 'agent');
-        } else {
-          setFlowState('IDLE');
-          setActiveTask({ ...pendingTask, difficulty: data });
-        }
-        break;
-      case 'BACK':
-        addMessage("↩ 返回", 'user');
-        if (flowState === 'SELECT_MEDIA') setFlowState('SELECT_TYPE');
-        else if (flowState === 'SELECT_CATEGORY') setFlowState('SELECT_MEDIA');
-        else if (flowState === 'SELECT_DIFFICULTY') {
-          if (pendingTask.type === TaskType.QUICK_JUDGMENT) setFlowState('SELECT_MEDIA');
-          else setFlowState('SELECT_CATEGORY');
-        }
-        addMessage("请重新选择：", 'agent');
+        addMessage(value, 'user');
+        setCurrentTaskConfig(prev => ({ ...prev, difficulty: value, startTime: Date.now() }));
+        setTaskProgress({ index: 0, correct: 0 });
+        setFlowState('EMOTION_LOOP');
+        showNextQuestion(0);
         break;
       case 'DAILY':
-        generateDailyReport();
+        addMessage("【我的日报统计】", 'user');
+        renderDailyReport();
+        setFlowState('IDLE');
         break;
       case 'ACCOUNT':
-        generateAccountReport();
+        addMessage("【我的账户统计】", 'user');
+        addMessage(stats, 'agent', 'account_report');
+        setFlowState('IDLE');
         break;
     }
   };
 
-  const generateDailyReport = () => {
-    addMessage("📊 正在提取今日贡献统计...", 'agent');
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayRecords = taskRecords.filter(r => r.timestamp >= today.getTime());
-      const payload = {
-        username: stats.username,
-        userId: stats.userId.slice(-8),
-        timestamp: new Date().toLocaleString(),
-        totalDuration: todayRecords.reduce((acc, curr) => acc + curr.duration, 0),
-        accuracy: todayRecords.length > 0 ? Math.round((todayRecords.reduce((a,b)=>a+b.correctCount,0)/todayRecords.reduce((a,b)=>a+b.totalCount,0))*100) : 0,
-        totalScore: todayRecords.reduce((acc, curr) => acc + curr.score, 0),
-      };
-      addMessage(payload, 'agent', 'daily_report');
-    }, 800);
+  const showNextQuestion = (idx: number) => {
+    const questions = [
+      "这个新功能太棒了，我非常喜欢！",
+      "客服的态度极其恶劣，令人愤怒。",
+      "我对明天的面试感到非常紧张和害怕。",
+      "天哪！这真是个意外的惊喜！",
+      "今天的天气阴沉沉的，让人感到沮丧。",
+      "看到家人的笑容，我感到非常幸福。",
+      "这个产品的质量简直是垃圾，太失望了。",
+      "终于完成了大项目，真是如释重负。",
+      "漆黑的走廊里传来奇怪的声音，好吓人。",
+      "万万没想到他会出现在这里，太惊讶了！"
+    ];
+    addMessage(`[任务 ${idx + 1}/10]\n"${questions[idx % questions.length]}"\n请判别情绪（正面/负面）：`, 'agent');
   };
 
-  const generateAccountReport = () => {
-    addMessage(stats, 'agent', 'account_report');
+  const handleEmotionSubmit = (isCorrect: boolean) => {
+    const nextIdx = taskProgress.index + 1;
+    const nextCorrect = taskProgress.correct + (isCorrect ? 1 : 0);
+    setTaskProgress({ index: nextIdx, correct: nextCorrect });
+
+    if (nextIdx < 10) {
+      showNextQuestion(nextIdx);
+    } else {
+      finishTask(nextCorrect);
+    }
   };
+
+  const finishTask = (finalCorrect: number) => {
+    setFlowState('SUBMITTED');
+    addMessage("您的答案已经提交，审核人员将校对您的答案，任务报告将以应用内通知的方式提供。", 'agent', 'status');
+    
+    // Simulate auditing after 10 seconds
+    setTimeout(() => {
+      const endTime = Date.now();
+      const duration = Math.round((endTime - currentTaskConfig.startTime) / 1000);
+      const score = finalCorrect * 15; // Contribution score
+      
+      onUpdateTaskCompletion(score, currentTaskConfig.type, currentTaskConfig.difficulty, {
+        correctCount: finalCorrect,
+        totalCount: 10,
+        startTime: currentTaskConfig.startTime,
+        endTime
+      }, CollectionCategory.EMOTION);
+
+      addMessage("您的答案已经审核，请查看任务报告：", 'agent');
+      
+      const reportPayload = {
+        username: stats.username,
+        taskId: `TASK-${endTime.toString().slice(-6)}`,
+        taskType: currentTaskConfig.type,
+        level: currentTaskConfig.difficulty,
+        fileType: currentTaskConfig.mediaType === 'TEXT' ? '文本' : '图片',
+        startTime: new Date(currentTaskConfig.startTime).toLocaleTimeString(),
+        duration: `${duration}s`,
+        accuracy: `${finalCorrect}/10`,
+        contribution: `+${score} PTS`
+      };
+      
+      addMessage(reportPayload, 'agent', 'task_summary');
+      setFlowState('IDLE');
+    }, 10000);
+  };
+
+  const renderDailyReport = () => {
+    const today = new Date().setHours(0,0,0,0);
+    const todayRecords = taskRecords.filter(r => r.timestamp >= today);
+    const payload = {
+      username: stats.username,
+      totalScore: todayRecords.reduce((a, b) => a + b.score, 0),
+      totalDuration: todayRecords.reduce((a, b) => a + b.duration, 0),
+      count: todayRecords.length
+    };
+    addMessage(payload, 'agent', 'daily_report');
+  };
+
+  const isLocked = flowState !== 'IDLE';
 
   const renderButtons = () => {
-    if (activeTask || flowState === 'IDLE') return null;
+    const isLast = (mIdx: number) => mIdx === messages.length - 1;
     
-    const menuBtn = "w-full py-5 bg-[#161618] border border-white/[0.05] rounded-[24px] text-[16px] font-bold text-white flex items-center justify-center transition-all active:scale-[0.97] hover:bg-[#1C1C1E] shadow-xl";
-    const subBtn = "w-full py-4 bg-[#161618] border border-white/[0.05] rounded-[20px] text-[15px] font-bold text-white flex items-center justify-center transition-all active:scale-[0.97]";
+    return messages.map((m, idx) => {
+      if (!isLast(idx)) return null;
 
-    if (flowState === 'EMOTION_LOOP') {
-      const isMulti = currentDifficulty !== Difficulty.EASY;
-      const reqCount = currentDifficulty === Difficulty.HARD ? 3 : currentDifficulty === Difficulty.MEDIUM ? 2 : 1;
-
-      return (
-        <div className="flex flex-col space-y-3 mt-4 w-full px-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="grid grid-cols-2 gap-2">
-            {EMOTION_LABELS.map((label) => {
-              const isSelected = selectedEmotions.includes(label);
-              return (
-                <button 
-                  key={label} 
-                  onClick={() => toggleEmotionSelection(label)} 
-                  className={`py-4 rounded-[16px] text-[12px] font-black uppercase transition-all active:scale-95 border ${
-                    isSelected 
-                      ? 'bg-blue-600 text-white border-blue-400 shadow-lg' 
-                      : 'bg-white/5 text-white/40 border-white/5'
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-
-          {isMulti && (
-            <button 
-              onClick={() => handleEmotionResponse('submit')} 
-              disabled={selectedEmotions.length !== reqCount}
-              className={`w-full py-5 rounded-[22px] font-black text-[15px] transition-all ${
-                selectedEmotions.length === reqCount 
-                  ? 'bg-green-600 text-white shadow-lg' 
-                  : 'bg-white/5 text-white/10 cursor-not-allowed'
-              }`}
-            >
-              提交判定 ({selectedEmotions.length}/{reqCount})
-            </button>
-          )}
-
-          <div className="grid grid-cols-2 gap-3 mt-2">
-            <button onClick={() => handleEmotionResponse('skip')} className="py-4 bg-[#232326] border border-white/5 rounded-[20px] text-[14px] font-bold text-white/40 active:scale-95 transition-all">⏭ 跳过</button>
-            <button onClick={() => handleEmotionResponse('exit')} className="py-4 bg-red-500/10 border border-red-500/20 rounded-[20px] text-[14px] font-bold text-red-500/60 active:scale-95 transition-all">⏹ 退出任务</button>
-          </div>
-        </div>
-      );
-    }
-
-    switch (flowState) {
-      case 'SELECT_TYPE':
+      if (m.type === 'menu_options' && flowState === 'SELECT_TYPE') {
         return (
-          <div className="flex flex-col space-y-3 mt-6 w-full px-2">
-            <button onClick={() => onSelectAction('TYPE', TaskType.QUICK_JUDGMENT)} className={menuBtn}>🎯 快判任务</button>
-            <button onClick={() => onSelectAction('TYPE', TaskType.COLLECTION)} className={menuBtn}>📸 采集任务</button>
+          <div key={m.id} className="grid grid-cols-2 gap-3 mt-4 px-2">
+            <button onClick={() => handleActionSelect('TYPE', TaskType.QUICK_JUDGMENT)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg">🎯 快判任务</button>
+            <button onClick={() => handleActionSelect('TYPE', TaskType.COLLECTION)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg">📸 采集任务</button>
+            <button onClick={() => handleActionSelect('DAILY', null)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg">📊 日报统计</button>
+            <button onClick={() => handleActionSelect('ACCOUNT', null)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg">👤 账户统计</button>
+          </div>
+        );
+      }
+
+      if (flowState === 'SELECT_MEDIA' && m.sender === 'agent' && m.type === 'text') {
+        return (
+          <div key={m.id} className="grid grid-cols-2 gap-3 mt-4 px-2">
+            <button onClick={() => handleActionSelect('MEDIA', '图片')} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg">🖼️ 图片</button>
+            <button onClick={() => handleActionSelect('MEDIA', '文本')} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg">📝 文本</button>
+          </div>
+        );
+      }
+
+      if (flowState === 'SELECT_DIFFICULTY' && m.sender === 'agent' && m.type === 'text') {
+        return (
+          <div key={m.id} className="grid grid-cols-3 gap-2 mt-4 px-2">
+            {[Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD].map(d => (
+              <button key={d} onClick={() => handleActionSelect('DIFFICULTY', d)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold text-xs active:scale-95 transition-all shadow-lg">{d}</button>
+            ))}
+          </div>
+        );
+      }
+
+      if (flowState === 'EMOTION_LOOP' && m.sender === 'agent' && m.payload.includes('[任务')) {
+        return (
+          <div key={m.id} className="flex flex-col space-y-3 mt-4 px-2">
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => onSelectAction('DAILY', null)} className={subBtn}>📊 今日统计</button>
-              <button onClick={() => onSelectAction('ACCOUNT', null)} className={subBtn}>👤 账户总览</button>
+              <button onClick={() => handleEmotionSubmit(true)} className="py-5 bg-blue-600 rounded-3xl font-black text-white text-[17px] shadow-lg shadow-blue-600/20 active:scale-95 transition-all">正面 (Positive)</button>
+              <button onClick={() => handleEmotionSubmit(false)} className="py-5 bg-[#232326] border border-white/5 rounded-3xl font-black text-white text-[17px] active:scale-95 transition-all">负面 (Negative)</button>
             </div>
+            <button onClick={() => {setFlowState('IDLE'); addMessage("已退出当前任务并返回对话模式。", 'agent');}} className="w-full py-3 bg-red-500/10 text-red-500 rounded-2xl text-xs font-bold uppercase tracking-widest border border-red-500/10">退出当前任务</button>
           </div>
         );
-      case 'SELECT_MEDIA':
-        const media = pendingTask.type === TaskType.QUICK_JUDGMENT ? ['IMAGE', 'TEXT'] : ['IMAGE', 'AUDIO', 'VIDEO'];
-        return (
-          <div className="flex flex-col space-y-3 mt-6 w-full px-2">
-            {media.map(m => (
-              <button key={m} onClick={() => onSelectAction('MEDIA', m)} className={subBtn}>
-                {m === 'TEXT' ? '📝 文本' : m === 'IMAGE' ? '🖼️ 图片' : m === 'AUDIO' ? '🎙️ 音频' : '📹 视频'}
-              </button>
-            ))}
-            <button onClick={() => onSelectAction('BACK', null)} className="py-3 text-[14px] text-blue-400 font-bold active:opacity-50">返回</button>
-          </div>
-        );
-      case 'SELECT_CATEGORY':
-        const cats = [CollectionCategory.ANIMAL, CollectionCategory.PLANT, CollectionCategory.PERSON, CollectionCategory.STREET, CollectionCategory.LIFE];
-        return (
-          <div className="flex flex-col space-y-3 mt-6 w-full px-2">
-            <div className="grid grid-cols-2 gap-2">
-              {cats.map(c => (
-                <button key={c} onClick={() => onSelectAction('CATEGORY', c)} className={subBtn}>{c}</button>
-              ))}
-            </div>
-            <button onClick={() => onSelectAction('BACK', null)} className="py-3 text-[14px] text-blue-400 font-bold active:opacity-50">返回</button>
-          </div>
-        );
-      case 'SELECT_DIFFICULTY':
-        const diffs = [Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD];
-        return (
-          <div className="flex flex-col space-y-3 mt-6 w-full px-2">
-            {diffs.map(d => (
-              <button key={d} onClick={() => onSelectAction('DIFFICULTY', d)} className={subBtn}>{d}</button>
-            ))}
-            <button onClick={() => onSelectAction('BACK', null)} className="py-3 text-[14px] text-blue-400 font-bold active:opacity-50">返回</button>
-          </div>
-        );
-      default: return null;
-    }
-  };
+      }
 
-  const renderGenericReport = (payload: any, isAccount: boolean) => {
-    return (
-      <div className="w-full bg-[#161618] rounded-[28px] p-6 border border-white/[0.03] space-y-6">
-        <div className="flex justify-between items-start">
-          <div className="space-y-1">
-            <h3 className="text-[17px] font-bold text-white">{isAccount ? '账户总览' : '今日成果'}</h3>
-            <p className="text-[11px] text-white/30 font-medium">{isAccount ? stats.userId : payload.timestamp}</p>
-          </div>
-          <div className="bg-blue-600/10 px-3 py-1 rounded-full">
-             <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{isAccount ? 'VIB NODE' : 'SYNCED'}</span>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-           <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/[0.02]">
-              <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mb-1">贡献积分</p>
-              <p className="text-2xl font-black text-white">{isAccount ? stats.totalScore : payload.totalScore} <span className="text-[12px] text-blue-500 ml-1">PTS</span></p>
-           </div>
-           <div className="bg-white/[0.02] p-4 rounded-2xl border border-white/[0.02]">
-              <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest mb-1">累计时长</p>
-              <p className="text-2xl font-black text-white">{isAccount ? stats.totalDuration : payload.totalDuration} <span className="text-[12px] text-white/40 ml-1">S</span></p>
-           </div>
-        </div>
-        <button onClick={() => setFlowState('SELECT_TYPE')} className="w-full py-4 bg-white/5 rounded-2xl text-[14px] font-bold text-white/60 active:bg-white/10">查看明细</button>
-      </div>
-    );
+      return null;
+    });
   };
 
   return (
     <div className="flex flex-col h-full bg-[#0A0A0A] relative">
-      <div className="h-16 flex items-center px-4 shrink-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/5">
-        <button onClick={onBack} className="p-2 -ml-2 text-white/90 active:opacity-50 transition-opacity">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/>
-          </svg>
+      {/* Header */}
+      <div className="h-16 flex items-center px-4 shrink-0 bg-black/40 backdrop-blur-lg border-b border-white/5 z-50">
+        <button 
+          disabled={isLocked}
+          onClick={onBack} 
+          className={`p-2 -ml-2 transition-all ${isLocked ? 'opacity-10 cursor-not-allowed' : 'text-white active:scale-90'}`}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"/></svg>
         </button>
-        <div className="flex flex-col ml-1">
-          <h2 className="text-[17px] font-bold text-white tracking-tight leading-none">AI 标注中心</h2>
-          <div className="flex items-center mt-1">
-            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
-            <span className="text-[10px] text-green-500 font-black uppercase tracking-widest">Connected</span>
-          </div>
+        <div className="flex flex-col ml-2">
+          <h2 className="text-[17px] font-bold text-white leading-none tracking-tight">AI 标注智能体</h2>
+          <span className="text-[10px] text-green-500 font-black uppercase tracking-widest mt-1">
+            {isLocked ? 'Task Running' : 'Agent Active'}
+          </span>
         </div>
-        <div className="ml-auto bg-blue-600 px-3 py-1.5 rounded-[12px] text-[12px] font-black text-white shadow-lg">
-          {stats.totalScore} PTS
-        </div>
+        <div className="ml-auto bg-blue-600 px-3 py-1.5 rounded-[12px] text-[12px] font-black text-white shadow-lg">{stats.totalScore} PTS</div>
       </div>
 
+      {/* Chat Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-48">
-        {messages.map((m, idx) => (
+        {messages.map((m) => (
           <div key={m.id} className="animate-in slide-in-from-bottom-2 duration-300">
-            {m.sender === 'agent' && (
-              <div className="flex items-center space-x-2 mb-2 ml-1">
-                <div className="w-5 h-5 rounded-md bg-blue-600 flex items-center justify-center text-[10px]">📄</div>
-                <span className="text-[11px] font-bold text-white/40 uppercase tracking-widest">Agent</span>
-              </div>
-            )}
-            
+            {m.sender === 'agent' && <div className="text-[10px] text-white/20 font-black uppercase ml-1 mb-1 tracking-widest">Annotator</div>}
             <div className={`flex ${m.sender === 'agent' ? 'justify-start' : 'justify-end'}`}>
-              <div className={`max-w-[92%] shadow-2xl ${
-                m.sender === 'agent' 
-                  ? 'bg-[#161618] rounded-[24px] rounded-tl-[4px] p-5 border border-white/[0.03]' 
-                  : 'bg-blue-600 rounded-[24px] rounded-tr-[4px] p-4 font-bold text-white text-[15px]'
-              } ${m.type === 'system' ? 'bg-white/5 border-none italic text-white/60 text-[13px] py-2 px-4 rounded-full' : ''}`}>
-                {m.type === 'daily_report' || m.type === 'account_report' ? (
-                  renderGenericReport(m.payload, m.type === 'account_report')
-                ) : m.type === 'report' ? (
-                  <div className="space-y-4 min-w-[240px]">
-                    <div className="flex items-center space-x-2 border-b border-white/10 pb-3">
-                      <h3 className="text-[11px] font-black uppercase text-blue-400 tracking-widest">任务审核结果</h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      {Object.entries(m.payload).map(([k, v]: any) => (
-                        <div key={k}>
-                          <p className="text-white/30 text-[9px] font-black uppercase tracking-wider">{k}</p>
-                          <p className="text-white text-[13px] font-bold truncate">{v?.toString()}</p>
+              <div className={`max-w-[90%] p-4 rounded-3xl shadow-2xl ${m.sender === 'agent' ? 'bg-[#161618] border border-white/5 text-white/95' : 'bg-blue-600 text-white font-bold text-[15px]'}`}>
+                {m.type === 'task_summary' ? (
+                  <div className="space-y-3 min-w-[260px] p-2">
+                    <h4 className="font-bold border-b border-white/10 pb-3 mb-1 text-center text-blue-400">任务结算报告</h4>
+                    <div className="space-y-2">
+                      {Object.entries(m.payload).map(([k, v]) => (
+                        <div key={k} className="flex justify-between text-[13px]">
+                          <span className="text-white/30 font-medium">{k}</span>
+                          <span className="font-bold">{v as string}</span>
                         </div>
                       ))}
                     </div>
                   </div>
+                ) : m.type === 'daily_report' ? (
+                  <div className="space-y-4 min-w-[220px]">
+                    <h4 className="font-bold text-blue-400 border-b border-white/5 pb-2">今日日报统计</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-white/5 p-3 rounded-2xl"><p className="text-[10px] text-white/30 font-bold">总积分</p><p className="text-xl font-black text-blue-400">{m.payload.totalScore}</p></div>
+                      <div className="bg-white/5 p-3 rounded-2xl"><p className="text-[10px] text-white/30 font-bold">总时长</p><p className="text-xl font-black">{m.payload.totalDuration}s</p></div>
+                    </div>
+                  </div>
+                ) : m.type === 'account_report' ? (
+                  <div className="space-y-4 min-w-[220px]">
+                    <h4 className="font-bold text-purple-400 border-b border-white/5 pb-2">账户资产报告</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center"><span className="text-white/30 text-xs">用户名</span><span className="font-bold">{m.payload.username}</span></div>
+                      <div className="flex justify-between items-center"><span className="text-white/30 text-xs">累计积分</span><span className="text-blue-500 font-black text-lg">{m.payload.totalScore}</span></div>
+                      <div className="flex justify-between items-center"><span className="text-white/30 text-xs">累计标注</span><span className="font-bold">{m.payload.totalAttempted} 条</span></div>
+                    </div>
+                  </div>
+                ) : m.type === 'status' ? (
+                  <div className="flex items-center space-x-3 py-1">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
+                    <p className="text-[14px] font-medium text-yellow-500/80 italic">{m.payload}</p>
+                  </div>
                 ) : (
-                  <p className="text-[15px] leading-[1.6] text-white/95 whitespace-pre-wrap font-medium">{m.payload}</p>
+                  <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{m.payload}</p>
                 )}
               </div>
             </div>
-            {idx === messages.length - 1 && renderButtons()}
           </div>
         ))}
-        
-        {isTyping && (
-          <div className="flex items-center space-x-2 ml-1">
-             <div className="w-5 h-5 rounded-md bg-blue-600 flex items-center justify-center text-[10px]">📄</div>
-             <div className="bg-[#161618] px-4 py-2 rounded-full border border-white/5 text-[11px] text-white/30 font-bold animate-pulse">处理中...</div>
-          </div>
-        )}
-
-        {activeTask && (
-          <div className="mt-4 pb-10">
-            <TaskFlow 
-              {...activeTask} 
-              onComplete={(s, t, p) => { 
-                setActiveTask(null); 
-                setFlowState('SELECT_TYPE'); 
-                addMessage("任务已提交至审核审计点。", 'agent');
-                setTimeout(() => sendFinalReport(t, activeTask.difficulty, p, activeTask.category), 8000);
-              }} 
-              onCancel={() => { 
-                setActiveTask(null); 
-                setFlowState('SELECT_TYPE'); 
-                addMessage("任务已中止。", 'agent'); 
-              }} 
-            />
-          </div>
-        )}
+        {renderButtons()}
+        {isTyping && <div className="flex items-center space-x-2 ml-1 mt-2"><div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></div><div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce delay-150"></div><div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce delay-300"></div></div>}
         <div ref={chatEndRef} />
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 pb-10 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/90 to-transparent z-40">
-        <div className="flex space-x-3 items-center bg-[#161618] border border-white/10 rounded-[32px] px-6 py-1 shadow-2xl">
+      {/* Input Bar */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 pb-10 bg-gradient-to-t from-black via-black/90 to-transparent z-40">
+        <div className={`flex items-center bg-[#161618] border border-white/10 rounded-[32px] px-4 py-2 shadow-2xl transition-all duration-500 ${isLocked ? 'opacity-30 grayscale' : 'opacity-100 shadow-blue-900/10'}`}>
           <input 
             type="text" 
+            disabled={isLocked}
             value={userInput} 
             onChange={e => setUserInput(e.target.value)} 
-            onKeyDown={e => e.key === 'Enter' && handleSendMessage()} 
-            placeholder={flowState === 'EMOTION_LOOP' ? "点击下方按钮判定情绪..." : "对话、提问或开启任务..."} 
-            className="flex-1 bg-transparent py-4 text-[15px] text-white focus:outline-none placeholder:text-white/20" 
-            disabled={!!activeTask}
+            onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+            placeholder={isLocked ? "任务处理中..." : "与智能体交流..."}
+            className="flex-1 bg-transparent px-2 py-3 text-[15px] text-white focus:outline-none placeholder:text-white/20"
           />
-          <button 
-            onClick={handleSendMessage} 
-            disabled={!userInput.trim() || !!activeTask}
-            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-              userInput.trim() ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-white/20'
-            }`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l7-7-7-7M5 12h14"/>
-            </svg>
-          </button>
+          
+          <div className="flex items-center space-x-2">
+            <button 
+              onClick={handleOpenMenu}
+              disabled={isLocked}
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${isLocked ? 'text-white/10' : 'text-blue-500 active:scale-90 hover:bg-white/5'}`}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" strokeWidth="2.5"/></svg>
+            </button>
+            
+            <button 
+              onClick={handleSendMessage}
+              disabled={!userInput.trim() || isTyping || isLocked}
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${userInput.trim() && !isTyping && !isLocked ? 'bg-blue-600 text-white shadow-lg active:scale-90' : 'bg-white/5 text-white/20'}`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 19l7-7-7-7M5 12h14" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3"/></svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
