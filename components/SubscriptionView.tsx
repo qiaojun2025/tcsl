@@ -14,12 +14,12 @@ const SubscriptionView: React.FC<SubscriptionViewProps> = ({ currentPlan, onBack
 
   const plusFeatures = [
     "Agent无限制、即时、准确的回答",
-    "任务完成次数每月300次"
+    "任务完成次数提升到每月300次"
   ];
 
   const proFeatures = [
     "Agent无限制、即时、准确的回答",
-    "任务完成次数每月1000次",
+    "任务完成次数提升到每月1000次",
     "优先体验高性能深度标注模型",
     "VIB Pro 独家开发者身份标识"
   ];
