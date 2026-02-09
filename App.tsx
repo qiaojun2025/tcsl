@@ -2,11 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import AgentList from './components/AgentList.tsx';
 import ChatInterface from './components/ChatInterface.tsx';
-import { UserStats, TaskType, Difficulty, CollectionCategory, TaskCompletionRecord } from './types.ts';
+import ProfileView from './components/ProfileView.tsx';
+import SubscriptionView from './components/SubscriptionView.tsx';
+import { UserStats, TaskType, Difficulty, CollectionCategory, TaskCompletionRecord, PlanTier } from './types.ts';
 
 const DEFAULT_STATS: UserStats = {
   userId: 'UID-' + Math.random().toString(36).substr(2, 6).toUpperCase(),
   username: '探路者_' + Math.floor(Math.random() * 900 + 100),
+  email: 'qiaojun2002@gmail.com',
+  plan: 'Free',
   totalDuration: 0, 
   totalCorrect: 0, 
   totalAttempted: 0,
@@ -30,8 +34,8 @@ const DEFAULT_STATS: UserStats = {
 };
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<'list' | 'chat'>('list');
-  const [activeTab, setActiveTab] = useState('home');
+  const [currentView, setCurrentView] = useState<'list' | 'chat' | 'subscription'>('list');
+  const [activeTab, setActiveTab] = useState<'home' | 'task' | 'explore' | 'user'>('home');
   
   const [stats, setStats] = useState<UserStats>(() => {
     const saved = localStorage.getItem('task_stats_v5');
@@ -127,23 +131,57 @@ const App: React.FC = () => {
     });
   };
 
-  return (
-    <div className="h-screen bg-[#0A0A0A] max-w-md mx-auto relative flex flex-col overflow-hidden text-white pt-safe">
-      <div className="flex-1 relative overflow-hidden flex flex-col">
-        {currentView === 'list' ? (
+  const handleUpdatePlan = (plan: PlanTier) => {
+    setStats(prev => ({ ...prev, plan }));
+    setCurrentView('list');
+    setActiveTab('user');
+  };
+
+  const renderContent = () => {
+    if (currentView === 'chat') {
+      return (
+        <ChatInterface 
+          stats={stats} 
+          taskRecords={taskRecords}
+          onBack={() => setCurrentView('list')} 
+          onUpdateTaskCompletion={handleUpdateTaskCompletion}
+        />
+      );
+    }
+
+    if (currentView === 'subscription') {
+      return (
+        <SubscriptionView 
+          currentPlan={stats.plan}
+          onBack={() => setCurrentView('list')} 
+          onSelectPlan={handleUpdatePlan}
+        />
+      );
+    }
+
+    // Tab handling for main list view
+    switch (activeTab) {
+      case 'user':
+        return (
+          <ProfileView 
+            stats={stats} 
+            onUpgrade={() => setCurrentView('subscription')}
+          />
+        );
+      case 'home':
+      default:
+        return (
           <div className="h-full overflow-y-auto pb-24 px-4 pt-4">
             <AgentList onSelectAgent={(id) => id === 'task-center' && setCurrentView('chat')} />
           </div>
-        ) : (
-          <div className="h-full">
-            <ChatInterface 
-              stats={stats} 
-              taskRecords={taskRecords}
-              onBack={() => setCurrentView('list')} 
-              onUpdateTaskCompletion={handleUpdateTaskCompletion}
-            />
-          </div>
-        )}
+        );
+    }
+  };
+
+  return (
+    <div className="h-screen bg-[#0A0A0A] max-w-md mx-auto relative flex flex-col overflow-hidden text-white pt-safe">
+      <div className="flex-1 relative overflow-hidden flex flex-col">
+        {renderContent()}
       </div>
       
       {currentView === 'list' && (

@@ -25,7 +25,9 @@ export enum CollectionCategory {
 
 export type MediaType = 'IMAGE' | 'AUDIO' | 'VIDEO' | 'TEXT';
 
-// Added Agent interface definition
+export type PlanTier = 'Free' | 'Plus' | 'Pro';
+export type BillingCycle = 'Monthly' | 'Quarterly' | 'HalfYearly' | 'Yearly';
+
 export interface Agent {
   id: string;
   name: string;
@@ -50,20 +52,22 @@ export interface TaskCompletionRecord {
 export interface UserStats {
   userId: string;
   username: string;
+  email: string;
+  plan: PlanTier;
   totalDuration: number;
   totalCorrect: number;
   totalAttempted: number;
   quickEasyCount: number;
   quickEasyScore: number;
-  quickMediumCount: number;
+  quickMediumCount: number; 
   quickMediumScore: number;
-  quickHardCount: number;
+  quickHardCount: number; 
   quickHardScore: number;
-  collectionEasyCount: number;
+  collectionEasyCount: number; 
   collectionEasyScore: number;
-  collectionMediumCount: number;
+  collectionMediumCount: number; 
   collectionMediumScore: number;
-  collectionHardCount: number;
+  collectionHardCount: number; 
   collectionHardScore: number;
   quickCount: number;
   collectionCount: number;
