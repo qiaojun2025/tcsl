@@ -51,7 +51,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ stats, onUpgrade }) => {
           <div className="bg-[#161618] rounded-[22px] overflow-hidden divide-y divide-white/[0.03] border border-white/5 shadow-xl">
             <MenuItem icon={<DocIcon />} label="服务条款" showArrow />
             <MenuItem icon={<PrivacyIcon />} label="隐私政策" showArrow />
-            <MenuItem icon={<DeviceIcon />} label="Surf iOS版" value="v1.8.4" />
+            <MenuItem icon={<DeviceIcon />} label="VIB iOS版" value="v1.8.4" />
           </div>
         </section>
 
