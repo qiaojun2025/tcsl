@@ -233,10 +233,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       if (m.type === 'menu_options' && flowState === 'SELECT_TYPE') {
         return (
           <div key={m.id} className="grid grid-cols-2 gap-3 mt-4 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <button onClick={() => handleActionSelect('TYPE', TaskType.QUICK_JUDGMENT)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg hover:bg-white/10">【快判任务】</button>
-            <button onClick={() => handleActionSelect('TYPE', TaskType.COLLECTION)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg hover:bg-white/10">【采集任务】</button>
-            <button onClick={() => handleActionSelect('DAILY', null)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg hover:bg-white/10">【我的日报统计】</button>
-            <button onClick={() => handleActionSelect('ACCOUNT', null)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg hover:bg-white/10">【我的账户统计】</button>
+            <button onClick={() => handleActionSelect('TYPE', TaskType.QUICK_JUDGMENT)} className="py-4 bg-white border border-black/[0.05] rounded-2xl text-black font-bold active:scale-95 transition-all shadow-sm">【快判任务】</button>
+            <button onClick={() => handleActionSelect('TYPE', TaskType.COLLECTION)} className="py-4 bg-white border border-black/[0.05] rounded-2xl text-black font-bold active:scale-95 transition-all shadow-sm">【采集任务】</button>
+            <button onClick={() => handleActionSelect('DAILY', null)} className="py-4 bg-white border border-black/[0.05] rounded-2xl text-black font-bold active:scale-95 transition-all shadow-sm">【我的日报统计】</button>
+            <button onClick={() => handleActionSelect('ACCOUNT', null)} className="py-4 bg-white border border-black/[0.05] rounded-2xl text-black font-bold active:scale-95 transition-all shadow-sm">【我的账户统计】</button>
           </div>
         );
       }
@@ -244,8 +244,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
       if (flowState === 'SELECT_MEDIA' && m.sender === 'agent' && m.type === 'text') {
         return (
           <div key={m.id} className="grid grid-cols-2 gap-3 mt-4 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <button onClick={() => handleActionSelect('MEDIA', '图片')} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg">🖼️ 图片类型</button>
-            <button onClick={() => handleActionSelect('MEDIA', '文本')} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold active:scale-95 transition-all shadow-lg">📝 文本类型</button>
+            <button onClick={() => handleActionSelect('MEDIA', '图片')} className="py-4 bg-white border border-black/[0.05] rounded-2xl text-black font-bold active:scale-95 transition-all shadow-sm">🖼️ 图片类型</button>
+            <button onClick={() => handleActionSelect('MEDIA', '文本')} className="py-4 bg-white border border-black/[0.05] rounded-2xl text-black font-bold active:scale-95 transition-all shadow-sm">📝 文本类型</button>
           </div>
         );
       }
@@ -254,7 +254,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         return (
           <div key={m.id} className="grid grid-cols-3 gap-2 mt-4 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {[Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD].map(d => (
-              <button key={d} onClick={() => handleActionSelect('DIFFICULTY', d)} className="py-4 bg-[#161618] border border-white/5 rounded-2xl text-white font-bold text-xs active:scale-95 transition-all shadow-lg">{d}</button>
+              <button key={d} onClick={() => handleActionSelect('DIFFICULTY', d)} className="py-4 bg-white border border-black/[0.05] rounded-2xl text-black font-bold text-xs active:scale-95 transition-all shadow-sm">{d}</button>
             ))}
           </div>
         );
@@ -264,8 +264,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
         return (
           <div key={m.id} className="flex flex-col space-y-3 mt-4 px-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => handleEmotionSubmit(true)} className="py-5 bg-blue-600 rounded-3xl font-black text-white text-[17px] shadow-lg shadow-blue-600/20 active:scale-95 transition-all">正面 (Yes)</button>
-              <button onClick={() => handleEmotionSubmit(false)} className="py-5 bg-[#232326] border border-white/5 rounded-3xl font-black text-white text-[17px] active:scale-95 transition-all">负面 (No)</button>
+              <button onClick={() => handleEmotionSubmit(true)} className="py-5 bg-[#007AFF] rounded-3xl font-black text-white text-[17px] shadow-lg shadow-blue-500/20 active:scale-95 transition-all">正面 (Yes)</button>
+              <button onClick={() => handleEmotionSubmit(false)} className="py-5 bg-black/5 rounded-3xl font-black text-black text-[17px] active:scale-95 transition-all">负面 (No)</button>
             </div>
             <button onClick={() => {setFlowState('IDLE'); addMessage("任务已中止，返回对话模式。", 'agent');}} className="w-full py-3 bg-red-500/10 text-red-500 rounded-2xl text-xs font-bold uppercase tracking-widest border border-red-500/10 active:bg-red-500/20 transition-all">退出当前任务</button>
           </div>
@@ -277,43 +277,42 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0A0A0A] relative">
+    <div className="flex flex-col h-full bg-[var(--bg-primary)] relative">
       {/* Top Header */}
-      <div className="h-16 flex items-center px-4 shrink-0 bg-black/40 backdrop-blur-lg border-b border-white/5 z-50 pt-safe">
+      <div className="h-16 flex items-center px-4 shrink-0 bg-white/80 backdrop-blur-lg border-b border-black/[0.05] z-50 pt-safe">
         <button 
           disabled={isLocked}
           onClick={onBack} 
-          className={`p-2 -ml-2 transition-all ${isLocked ? 'opacity-10 cursor-not-allowed grayscale' : 'text-white active:scale-90 hover:bg-white/5 rounded-full'}`}
+          className={`p-2 -ml-2 transition-all ${isLocked ? 'opacity-10 cursor-not-allowed grayscale' : 'text-black active:scale-90 hover:bg-black/5 rounded-full'}`}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5"/></svg>
         </button>
         <div className="flex flex-col ml-2">
-          <h2 className="text-[17px] font-bold text-white leading-none tracking-tight">AI 标注智能体</h2>
-          <span className="text-[10px] text-green-500 font-black uppercase tracking-widest mt-1">
+          <h2 className="text-[17px] font-bold text-black leading-none tracking-tight">AI 标注智能体</h2>
+          <span className="text-[10px] text-[#34C759] font-black uppercase tracking-widest mt-1">
             {isLocked ? 'Processing...' : 'Agent Ready'}
           </span>
         </div>
-        <div className="ml-auto bg-blue-600 px-3 py-1.5 rounded-[12px] text-[12px] font-black text-white shadow-lg shadow-blue-600/20">{stats.totalScore} PTS</div>
+        <div className="ml-auto bg-[#007AFF] px-3 py-1.5 rounded-[12px] text-[12px] font-black text-white shadow-md shadow-blue-500/10">{stats.totalScore} PTS</div>
       </div>
 
       {/* Chat Display Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-48">
         {messages.map((m) => {
-          // If message is a pure trigger without payload, don't render the bubble shell
           if (!m.payload && m.type !== 'status') return <div key={m.id} />;
 
           return (
             <div key={m.id} className="animate-in slide-in-from-bottom-2 duration-300">
-              {m.sender === 'agent' && m.type !== 'status' && <div className="text-[10px] text-white/20 font-black uppercase ml-1 mb-1 tracking-widest">Annotator</div>}
+              {m.sender === 'agent' && m.type !== 'status' && <div className="text-[10px] text-black/20 font-black uppercase ml-1 mb-1 tracking-widest">Annotator</div>}
               <div className={`flex ${m.sender === 'agent' ? 'justify-start' : 'justify-end'}`}>
-                <div className={`max-w-[90%] p-4 rounded-3xl shadow-2xl ${m.sender === 'agent' ? 'bg-[#161618] border border-white/5 text-white/95' : 'bg-blue-600 text-white font-bold text-[15px]'}`}>
+                <div className={`max-w-[90%] p-4 rounded-[24px] shadow-sm ${m.sender === 'agent' ? 'bg-white border border-black/[0.03] text-black/90' : 'bg-[#007AFF] text-white font-bold text-[15px]'}`}>
                   {m.type === 'task_summary' ? (
                     <div className="space-y-3 min-w-[260px] p-2">
-                      <h4 className="font-bold border-b border-white/10 pb-3 mb-1 text-center text-blue-400">任务结算报告</h4>
+                      <h4 className="font-bold border-b border-black/5 pb-3 mb-1 text-center text-[#007AFF]">任务结算报告</h4>
                       <div className="space-y-2">
                         {Object.entries(m.payload).map(([k, v]) => (
                           <div key={k} className="flex justify-between text-[13px]">
-                            <span className="text-white/30 font-medium">{k}</span>
+                            <span className="text-black/30 font-medium">{k}</span>
                             <span className="font-bold">{v as string}</span>
                           </div>
                         ))}
@@ -321,25 +320,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
                     </div>
                   ) : m.type === 'daily_report' ? (
                     <div className="space-y-4 min-w-[220px]">
-                      <h4 className="font-bold text-blue-400 border-b border-white/5 pb-2">今日日报统计</h4>
+                      <h4 className="font-bold text-[#007AFF] border-b border-black/5 pb-2">今日日报统计</h4>
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white/5 p-3 rounded-2xl border border-white/[0.03]"><p className="text-[10px] text-white/30 font-bold">总积分</p><p className="text-xl font-black text-blue-400">{m.payload.totalScore}</p></div>
-                        <div className="bg-white/5 p-3 rounded-2xl border border-white/[0.03]"><p className="text-[10px] text-white/30 font-bold">总耗时</p><p className="text-xl font-black">{m.payload.totalDuration}s</p></div>
+                        <div className="bg-black/5 p-3 rounded-2xl border border-black/[0.02]"><p className="text-[10px] text-black/30 font-bold">总积分</p><p className="text-xl font-black text-[#007AFF]">{m.payload.totalScore}</p></div>
+                        <div className="bg-black/5 p-3 rounded-2xl border border-black/[0.02]"><p className="text-[10px] text-black/30 font-bold">总耗时</p><p className="text-xl font-black">{m.payload.totalDuration}s</p></div>
                       </div>
                     </div>
                   ) : m.type === 'account_report' ? (
                     <div className="space-y-4 min-w-[220px]">
-                      <h4 className="font-bold text-purple-400 border-b border-white/5 pb-2">账户资产报告</h4>
+                      <h4 className="font-bold text-[#AF52DE] border-b border-black/5 pb-2">账户资产报告</h4>
                       <div className="space-y-3">
-                        <div className="flex justify-between items-center"><span className="text-white/30 text-xs">用户名</span><span className="font-bold">{m.payload.username}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-white/30 text-xs">累计积分</span><span className="text-blue-500 font-black text-lg">{m.payload.totalScore}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-white/30 text-xs">累计标注</span><span className="font-bold">{m.payload.totalAttempted} 条</span></div>
+                        <div className="flex justify-between items-center"><span className="text-black/30 text-xs">用户名</span><span className="font-bold">{m.payload.username}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-black/30 text-xs">累计积分</span><span className="text-[#007AFF] font-black text-lg">{m.payload.totalScore}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-black/30 text-xs">累计标注</span><span className="font-bold">{m.payload.totalAttempted} 条</span></div>
                       </div>
                     </div>
                   ) : m.type === 'status' ? (
                     <div className="flex items-center space-x-3 py-1">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                      <p className="text-[14px] font-medium text-yellow-500/80 italic">{m.payload}</p>
+                      <div className="w-2 h-2 bg-[#FF9500] rounded-full animate-pulse"></div>
+                      <p className="text-[14px] font-medium text-[#FF9500] italic">{m.payload}</p>
                     </div>
                   ) : m.payload ? (
                     <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{typeof m.payload === 'string' ? m.payload : JSON.stringify(m.payload)}</p>
@@ -350,13 +349,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
           );
         })}
         {renderButtons()}
-        {isTyping && <div className="flex items-center space-x-2 ml-1 mt-2"><div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></div><div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce delay-150"></div><div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce delay-300"></div></div>}
+        {isTyping && <div className="flex items-center space-x-2 ml-1 mt-2"><div className="w-1.5 h-1.5 bg-[#007AFF] rounded-full animate-bounce"></div><div className="w-1.5 h-1.5 bg-[#007AFF] rounded-full animate-bounce delay-150"></div><div className="w-1.5 h-1.5 bg-[#007AFF] rounded-full animate-bounce delay-300"></div></div>}
         <div ref={chatEndRef} />
       </div>
 
       {/* Modern Fixed Input Bar */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 pb-10 bg-gradient-to-t from-black via-black/90 to-transparent z-40 pb-safe">
-        <div className={`flex items-center bg-[#161618] border border-white/10 rounded-[32px] px-4 py-2 shadow-2xl transition-all duration-500 ${isLocked ? 'opacity-30 grayscale' : 'opacity-100 shadow-blue-900/10'}`}>
+      <div className="absolute bottom-0 left-0 right-0 p-4 pb-10 bg-gradient-to-t from-[var(--bg-primary)] via-[var(--bg-primary)]/90 to-transparent z-40 pb-safe">
+        <div className={`flex items-center bg-white border border-black/[0.08] rounded-[32px] px-4 py-2 shadow-lg transition-all duration-500 ${isLocked ? 'opacity-30 grayscale' : 'opacity-100 shadow-blue-500/5'}`}>
           <input 
             type="text" 
             disabled={isLocked}
@@ -364,14 +363,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
             onChange={e => setUserInput(e.target.value)} 
             onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
             placeholder={isLocked ? "正在执行任务..." : "输入消息或提问..."}
-            className="flex-1 bg-transparent px-2 py-3 text-[15px] text-white focus:outline-none placeholder:text-white/20 transition-opacity"
+            className="flex-1 bg-transparent px-2 py-3 text-[15px] text-black focus:outline-none placeholder:text-black/20 transition-opacity"
           />
           
           <div className="flex items-center space-x-2">
             <button 
               onClick={handleOpenMenu}
               disabled={isLocked}
-              className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${isLocked ? 'text-white/10 cursor-not-allowed opacity-20' : 'text-blue-500 active:scale-90 hover:bg-white/5 active:bg-blue-500/10'}`}
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${isLocked ? 'text-black/10 cursor-not-allowed opacity-20' : 'text-[#007AFF] active:scale-90 hover:bg-black/5'}`}
               title="任务功能菜单"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round"/></svg>
@@ -380,7 +379,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ stats, taskRecords, onBac
             <button 
               onClick={handleSendMessage}
               disabled={!userInput.trim() || isTyping || isLocked}
-              className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${userInput.trim() && !isTyping && !isLocked ? 'bg-blue-600 text-white shadow-lg active:scale-90 shadow-blue-600/20' : 'bg-white/5 text-white/20'}`}
+              className={`w-10 h-10 flex items-center justify-center rounded-full transition-all ${userInput.trim() && !isTyping && !isLocked ? 'bg-[#007AFF] text-white shadow-md active:scale-90' : 'bg-black/5 text-black/10'}`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3"><path d="M12 19l7-7-7-7M5 12h14" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>

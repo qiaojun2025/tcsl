@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { PlanTier, BillingCycle } from '../types.ts';
+import { PlanTier } from '../types.ts';
 
 interface SubscriptionViewProps {
   currentPlan: PlanTier;
@@ -9,133 +9,163 @@ interface SubscriptionViewProps {
 }
 
 const SubscriptionView: React.FC<SubscriptionViewProps> = ({ currentPlan, onBack, onSelectPlan }) => {
-  const [tier, setTier] = useState<PlanTier>('Plus');
-  const [cycle, setCycle] = useState<BillingCycle>('Monthly');
+  const [view, setView] = useState<'Basic' | 'Pro'>('Basic');
+  const [proBilling, setProBilling] = useState<'Monthly' | 'Yearly'>('Monthly');
 
-  const plusFeatures = [
-    "Agent无限制、即时、准确的回答",
-    "任务完成次数提升到每月300次"
-  ];
+  const EnergyIcon = () => (
+    <div className="w-8 h-8 rounded-full bg-[#007AFF]/10 flex items-center justify-center shrink-0">
+      <svg className="w-5 h-5 text-[#007AFF]" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+      </svg>
+    </div>
+  );
 
-  const proFeatures = [
-    "Agent无限制、即时、准确的回答",
-    "任务完成次数提升到每月1000次",
-    "优先体验高性能深度标注模型",
-    "VIB Pro 独家开发者身份标识"
-  ];
+  const FeatureItem = ({ text, bold = false }: { text: string; bold?: boolean }) => (
+    <div className="flex items-center space-x-4 py-1">
+      <svg className="w-5 h-5 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M5 13l4 4L19 7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      <span className={`text-[16px] ${bold ? 'font-bold text-black' : 'font-medium text-black/70'}`}>{text}</span>
+    </div>
+  );
 
-  const features = tier === 'Plus' ? plusFeatures : proFeatures;
-
-  const getPriceData = () => {
-    if (tier === 'Plus') {
-      return [
-        { cycle: 'Monthly', label: '包月', price: '9.9', oldPrice: '15.9', suffix: '/月' },
-        { cycle: 'Quarterly', label: '季度', price: '17.99', oldPrice: '47.7', suffix: '/季', badge: '最热门' },
-        { cycle: 'HalfYearly', label: '半年', price: '47.99', oldPrice: '95.4', suffix: '/半年', badge: '特惠' }
-      ];
-    } else {
-      return [
-        { cycle: 'Monthly', label: '包月', price: '19.9', oldPrice: '29.9', suffix: '/月' },
-        { cycle: 'Quarterly', label: '季度', price: '49.99', oldPrice: '89.7', suffix: '/季', badge: '特惠' },
-        { cycle: 'HalfYearly', label: '半年', price: '89.99', oldPrice: '179.4', suffix: '/半年', badge: '专业选' }
-      ];
-    }
-  };
-
-  const pricingOptions = getPriceData();
-
-  return (
-    <div className="flex flex-col h-full bg-[#0A0A0A] text-white overflow-y-auto animate-in slide-in-from-right-4 duration-300 pb-10">
-      {/* Background Graphic Elements */}
-      <div className="absolute top-0 inset-x-0 h-64 bg-gradient-to-b from-[#1A1A1A] to-transparent pointer-events-none -z-10 overflow-hidden">
-         <div className="absolute top-0 right-0 w-64 h-64 border border-white/[0.02] rotate-45 transform translate-x-1/2 -translate-y-1/2"></div>
-      </div>
-
-      {/* Header */}
-      <div className="h-14 flex items-center px-4 shrink-0 mt-4">
-        <button onClick={onBack} className="w-10 h-10 flex items-center justify-center bg-white/5 rounded-full active:scale-90 transition-transform hover:bg-white/10">
-           <svg className="w-5 h-5 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" strokeWidth="3" strokeLinecap="round"/></svg>
-        </button>
-      </div>
-
-      <div className="px-6 flex flex-col items-center">
+  const renderBasic = () => (
+    <div className="flex flex-col h-full animate-in fade-in duration-500">
+      <div className="px-6 pt-10">
         {/* Title Area */}
-        <h1 className="text-[30px] font-black text-white mt-6 tracking-tight">VIB 订阅计划</h1>
+        <div className="text-center mb-10">
+          <h1 className="text-[28px] font-black text-black tracking-tight">VIB订阅计划</h1>
+        </div>
 
-        {/* Plan Switcher Area */}
-        <div className="w-full bg-white/5 rounded-full p-1.5 flex mt-8 mb-8 border border-white/10 shadow-2xl">
+        {/* Switcher Area */}
+        <div className="bg-black/5 rounded-2xl p-1.5 flex mb-10 border border-black/[0.03]">
           <button 
-            onClick={() => setTier('Plus')}
-            className={`flex-1 py-3 rounded-full text-[15px] font-bold transition-all duration-300 ${tier === 'Plus' ? 'bg-[#FF1B6B] text-white shadow-[0_0_25px_rgba(255,27,107,0.4)]' : 'text-white/40 hover:text-white/60'}`}
+            onClick={() => setView('Basic')}
+            className={`flex-1 py-3 rounded-[12px] text-[14px] font-bold transition-all ${view === 'Basic' ? 'bg-white text-black shadow-sm' : 'text-black/40'}`}
           >
-            Plus
+            Basic Membership
           </button>
           <button 
-            onClick={() => setTier('Pro')}
-            className={`flex-1 py-3 rounded-full text-[15px] font-bold transition-all duration-300 ${tier === 'Pro' ? 'bg-[#FF1B6B] text-white shadow-[0_0_25px_rgba(255,27,107,0.4)]' : 'text-white/40 hover:text-white/60'}`}
+            onClick={() => setView('Pro')}
+            className={`flex-1 py-3 rounded-[12px] text-[14px] font-bold transition-all ${view === 'Pro' ? 'bg-white text-black shadow-sm' : 'text-black/40'}`}
           >
-            Pro
+            Pro Membership
           </button>
         </div>
 
         {/* Description Area */}
-        <div className="w-full bg-[#161618] rounded-[32px] p-7 space-y-6 border border-white/[0.05] shadow-2xl">
-          {features.map((f, i) => (
-            <div key={i} className="flex items-start space-x-4">
-              <div className="w-6 h-6 bg-[#FF1B6B]/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-3.5 h-3.5 text-[#FF1B6B]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </div>
-              <span className="text-[15px] font-bold text-white/90 leading-relaxed tracking-tight">{f}</span>
-            </div>
-          ))}
+        <div className="bg-white rounded-[28px] p-6 border border-black/[0.05] shadow-sm space-y-4">
+          <div className="flex items-center space-x-3 mb-2">
+            <EnergyIcon />
+            <span className="text-[20px] font-black text-black">100/day</span>
+          </div>
+          <div className="h-px bg-black/[0.05] w-full"></div>
+          <FeatureItem text="20 Private Agents" bold />
+          <FeatureItem text="10 Points Everyday Login" bold />
+        </div>
+      </div>
+
+      <div className="mt-auto px-6 pb-12">
+        {/* Label Area (Changed from button to read-only label) */}
+        <div 
+          className="w-full py-5 bg-[#E5E5EA] text-black/30 font-bold rounded-[24px] text-[18px] text-center select-none"
+        >
+          Current Level
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPro = () => (
+    <div className="flex flex-col h-full animate-in fade-in duration-500">
+      <div className="px-6 pt-10">
+        {/* Title Area */}
+        <div className="text-center mb-10">
+          <h1 className="text-[28px] font-black text-[#F2994A] tracking-tight">Pro Membership</h1>
+        </div>
+
+        {/* Description Area */}
+        <div className="bg-white rounded-[28px] p-6 border border-black/[0.05] shadow-sm space-y-4 mb-8">
+          <div className="flex items-center space-x-3 mb-2">
+            <EnergyIcon />
+            <span className="text-[20px] font-black text-black">Unlimited</span>
+          </div>
+          <div className="h-px bg-black/[0.05] w-full"></div>
+          <FeatureItem text="Unlimited Private Agents" bold />
+          <FeatureItem text="500 Points Everyday Login" bold />
+          <FeatureItem text="Premium Badge" bold />
         </div>
 
         {/* Payment Plan Area */}
-        <div className="w-full flex flex-col space-y-4 mt-10 mb-10">
-          {pricingOptions.map((opt) => (
-            <div 
-              key={opt.cycle}
-              onClick={() => setCycle(opt.cycle as BillingCycle)}
-              className={`relative flex items-center p-6 rounded-[24px] border-2 transition-all duration-300 cursor-pointer ${cycle === opt.cycle ? 'bg-[#FF1B6B]/5 border-[#FF1B6B] shadow-[0_0_30px_rgba(255,27,107,0.15)]' : 'bg-[#161618] border-white/5 hover:border-white/10'}`}
+        <div className="flex flex-col items-center">
+          <div className="bg-black/5 rounded-2xl p-1.5 flex w-full mb-6 border border-black/[0.03]">
+            <button 
+              onClick={() => setProBilling('Monthly')}
+              className={`flex-1 py-3 rounded-[12px] text-[14px] font-bold transition-all ${proBilling === 'Monthly' ? 'bg-white text-black shadow-sm' : 'text-black/40'}`}
             >
-              {opt.badge && (
-                <div className="absolute -top-3 right-5 bg-[#FF1B6B] text-white text-[10px] font-black px-3.5 py-1.5 rounded-full shadow-lg uppercase tracking-widest">
-                  {opt.badge}
-                </div>
-              )}
-              
-              <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <span className={`text-[18px] font-black transition-colors ${cycle === opt.cycle ? 'text-white' : 'text-white/80'}`}>{opt.label}</span>
-                  <span className="text-[14px] text-white/20 line-through font-medium tracking-tight">${opt.oldPrice}</span>
-                </div>
-                <p className={`text-[12px] font-bold uppercase tracking-widest mt-1 ${cycle === opt.cycle ? 'text-[#FF1B6B]' : 'text-white/30'}`}>{opt.suffix}</p>
-              </div>
-
-              <div className="text-right flex items-center space-x-5">
-                <div className="flex flex-col items-end">
-                   <span className="text-[26px] font-black text-white leading-none tracking-tight">${opt.price}</span>
-                </div>
-                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${cycle === opt.cycle ? 'bg-[#FF1B6B] border-[#FF1B6B] scale-110' : 'border-white/10'}`}>
-                  {cycle === opt.cycle && <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                </div>
-              </div>
-            </div>
-          ))}
+              Monthly
+            </button>
+            <button 
+              onClick={() => setProBilling('Yearly')}
+              className={`flex-1 py-3 rounded-[12px] text-[14px] font-bold transition-all ${proBilling === 'Yearly' ? 'bg-white text-black shadow-sm' : 'text-black/40'}`}
+            >
+              Yearly
+            </button>
+          </div>
+          <p className="text-center text-[15px] font-medium text-black/60 leading-relaxed">
+            {proBilling === 'Monthly' 
+              ? "Billed monthly at 19.99$.\nCancel anytime." 
+              : "Billed monthly at 167.9$.\nCancel anytime."}
+          </p>
         </div>
+      </div>
 
+      <div className="mt-auto px-6 pb-8">
         {/* Button Area */}
         <button 
-          onClick={() => onSelectPlan(tier)}
-          className="w-full bg-[#FF1B6B] text-white font-black py-5 rounded-[28px] shadow-[0_12px_40px_rgba(255,27,107,0.4)] active:scale-[0.96] hover:scale-[1.01] transition-all text-[18px] mb-4 tracking-tight"
+          onClick={() => onSelectPlan('Pro')}
+          className="w-full py-5 bg-[#007AFF] text-white font-bold rounded-[24px] text-[18px] shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
         >
-          继续
+          Upgrade to Pro >
         </button>
 
-        <p className="text-[11px] text-white/20 mt-6 text-center leading-relaxed font-semibold px-4">
-          确认购买即表示您同意我们的 <span className="underline decoration-[#FF1B6B]/30 text-white/40">隐私政策</span> 和 <span className="underline decoration-[#FF1B6B]/30 text-white/40">服务条款</span>。<br/>订阅将自动按选择周期续订，您可以随时在应用设置中取消。
-        </p>
+        <div className="mt-6 flex flex-col items-center space-y-3">
+          <p className="text-[12px] font-medium text-black/30">Terms & Conditions | Privacy Policy</p>
+          <button className="text-[14px] font-bold text-[#007AFF] active:opacity-60 transition-opacity">Restore</button>
+        </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-full bg-[#F2F2F7] text-black relative select-none">
+      {/* Back Button */}
+      <div className="h-14 flex items-center px-4 relative z-50">
+        <button 
+          onClick={onBack} 
+          className="w-10 h-10 flex items-center justify-center bg-white rounded-full border border-black/[0.05] shadow-sm active:scale-90 transition-transform"
+        >
+          <svg className="w-5 h-5 text-black/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M15 19l-7-7 7-7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {view === 'Basic' ? renderBasic() : renderPro()}
+      </div>
+
+      {/* Persistent Bottom Switcher (Only when viewing Basic) */}
+      {view === 'Basic' && (
+        <div className="px-6 pb-6">
+          <button 
+            onClick={() => setView('Pro')}
+            className="w-full py-3 bg-white border border-black/[0.05] rounded-[16px] text-[13px] font-bold text-[#007AFF] shadow-sm active:bg-black/5 transition-colors"
+          >
+            Compare with Pro Membership
+          </button>
+        </div>
+      )}
     </div>
   );
 };

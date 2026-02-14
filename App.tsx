@@ -179,17 +179,17 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen bg-[#0A0A0A] max-w-md mx-auto relative flex flex-col overflow-hidden text-white pt-safe">
+    <div className="h-screen bg-[var(--bg-primary)] max-w-md mx-auto relative flex flex-col overflow-hidden text-[var(--text-primary)] pt-safe">
       <div className="flex-1 relative overflow-hidden flex flex-col">
         {renderContent()}
       </div>
       
       {currentView === 'list' && (
-        <div className="absolute bottom-0 left-0 right-0 ios-blur border-t border-white/5 flex justify-around items-center h-20 px-6 z-40 pb-safe">
-          <button onClick={() => setActiveTab('home')} className={`p-2 transition-colors ${activeTab === 'home' ? 'text-white' : 'text-[#71717A]'}`}><HomeIcon /></button>
-          <button onClick={() => setActiveTab('task')} className={`p-2 transition-colors ${activeTab === 'task' ? 'text-white' : 'text-[#71717A]'}`}><TaskIcon /></button>
-          <button onClick={() => setActiveTab('explore')} className={`p-2 transition-colors ${activeTab === 'explore' ? 'text-white' : 'text-[#71717A]'}`}><CompassIcon /></button>
-          <button onClick={() => setActiveTab('user')} className={`p-2 transition-colors ${activeTab === 'user' ? 'text-white' : 'text-[#71717A]'}`}><UserIcon /></button>
+        <div className="absolute bottom-0 left-0 right-0 ios-blur border-t border-[var(--border-color)] flex justify-around items-center h-20 px-6 z-40 pb-safe">
+          <button onClick={() => setActiveTab('home')} className={`p-2 transition-colors ${activeTab === 'home' ? 'text-[var(--accent-blue)]' : 'text-[#8E8E93]'}`}><HomeIcon /></button>
+          <button onClick={() => setActiveTab('task')} className={`p-2 transition-colors ${activeTab === 'task' ? 'text-[var(--accent-blue)]' : 'text-[#8E8E93]'}`}><TaskIcon /></button>
+          <button onClick={() => setActiveTab('explore')} className={`p-2 transition-colors ${activeTab === 'explore' ? 'text-[var(--accent-blue)]' : 'text-[#8E8E93]'}`}><CompassIcon /></button>
+          <button onClick={() => setActiveTab('user')} className={`p-2 transition-colors ${activeTab === 'user' ? 'text-[var(--accent-blue)]' : 'text-[#8E8E93]'}`}><UserIcon /></button>
         </div>
       )}
     </div>
@@ -197,13 +197,13 @@ const App: React.FC = () => {
 };
 
 const HomeIcon = () => (
-  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <path d="M3 9.5L12 3L21 9.5V19C21 19.5523 20.5523 20 20 20H4C3.44772 20 3 19.5523 3 19V9.5Z" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M9 20V12H15V20" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 const TaskIcon = () => (
-  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <rect x="3" y="4" width="18" height="16" rx="2" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M7 8H17" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M7 12H17" strokeLinecap="round" strokeLinejoin="round"/>
@@ -211,13 +211,13 @@ const TaskIcon = () => (
   </svg>
 );
 const CompassIcon = () => (
-  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <circle cx="12" cy="12" r="9" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M12 3V21M3 12H21" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 const UserIcon = () => (
-  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
     <circle cx="12" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M5.5 21C5.5 17.134 8.41015 14.2239 12.2761 14.2239V14.2239C16.1421 14.2239 19.0522 17.134 19.0522 21" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>

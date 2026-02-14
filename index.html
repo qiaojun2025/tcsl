@@ -12,12 +12,13 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         
         :root {
-            --bg-primary: #0A0A0A;
-            --bg-secondary: #161618;
-            --bg-tertiary: #232326;
-            --accent-blue: #3E8BFF;
-            --text-primary: #FFFFFF;
-            --text-secondary: #A1A1AA;
+            --bg-primary: #F2F2F7;
+            --bg-secondary: #FFFFFF;
+            --bg-tertiary: #E5E5EA;
+            --accent-blue: #007AFF;
+            --text-primary: #000000;
+            --text-secondary: #8E8E93;
+            --border-color: rgba(0, 0, 0, 0.05);
         }
 
         body {
@@ -33,25 +34,26 @@
         .ios-card {
             background: var(--bg-secondary);
             border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
         }
 
         .ios-blur {
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            background: rgba(16, 16, 18, 0.85);
+            background: rgba(255, 255, 255, 0.85);
         }
 
         .gradient-blue {
-            background: linear-gradient(135deg, #1A4BD3 0%, #3687FF 100%);
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
         }
 
         .gradient-purple {
-            background: linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%);
+            background: linear-gradient(135deg, #AF52DE 0%, #FF2D55 100%);
         }
 
         .gradient-cyan {
-            background: linear-gradient(135deg, #0891B2 0%, #22D3EE 100%);
+            background: linear-gradient(135deg, #32ADE6 0%, #007AFF 100%);
         }
 
         .pb-safe {
@@ -68,7 +70,7 @@
 
         @keyframes pulse-soft {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+            50% { opacity: 0.8; }
         }
         .animate-pulse-soft {
             animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
