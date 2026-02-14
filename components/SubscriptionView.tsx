@@ -126,7 +126,7 @@ const SubscriptionView: React.FC<SubscriptionViewProps> = ({ currentPlan, onBack
           onClick={() => onSelectPlan('Pro')}
           className="w-full py-5 bg-[#007AFF] text-white font-bold rounded-[24px] text-[18px] shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
         >
-          Upgrade to Pro >
+          Upgrade to Pro
         </button>
 
         <div className="mt-6 flex flex-col items-center space-y-3">
@@ -154,18 +154,6 @@ const SubscriptionView: React.FC<SubscriptionViewProps> = ({ currentPlan, onBack
       <div className="flex-1 overflow-y-auto">
         {view === 'Basic' ? renderBasic() : renderPro()}
       </div>
-
-      {/* Persistent Bottom Switcher (Only when viewing Basic) */}
-      {view === 'Basic' && (
-        <div className="px-6 pb-6">
-          <button 
-            onClick={() => setView('Pro')}
-            className="w-full py-3 bg-white border border-black/[0.05] rounded-[16px] text-[13px] font-bold text-[#007AFF] shadow-sm active:bg-black/5 transition-colors"
-          >
-            Compare with Pro Membership
-          </button>
-        </div>
-      )}
     </div>
   );
 };
