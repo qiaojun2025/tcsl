@@ -34,7 +34,7 @@ const SubscriptionView: React.FC<SubscriptionViewProps> = ({ currentPlan, onBack
       <div className="px-6 pt-10">
         {/* Title Area */}
         <div className="text-center mb-10">
-          <h1 className="text-[28px] font-black text-black tracking-tight">VIB订阅计划</h1>
+          <h1 className="text-[28px] font-black text-black tracking-tight">VIB Subscription Plan</h1>
         </div>
 
         {/* Switcher Area */}
